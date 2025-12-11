@@ -1,0 +1,107 @@
+$backgroundColor: #030302;
+$bodyColor: #fcf2d7;
+$bodyFont:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+
+@font-face {
+    font-family: "Mackinac Book";
+    src: url("./fonts/P22MackinacProBook.otf");
+}
+
+/* @font-face {
+    font-family: Mackinac Medium;
+    src: url("./fonts/P22MackinacProMedium.otf");
+} */
+
+body {
+    height: 100vh;
+    background: $backgroundColor;
+    color: $bodyColor;
+    font-family: $bodyFont;
+
+    h1,
+    p {
+        font-family: "Mackinac Book";
+        font-size: 14px;
+    }
+
+    em {
+        font-style: normal;
+        color: #a49f93;
+    }
+
+    overflow: hidden;
+}
+
+main {
+    height: 100vh;
+    display: grid;
+    grid-template-columns: auto auto;
+    justify-content: space-between;
+    grid-gap: 32px;
+    padding: 32px 32px 0px;
+    overflow: none;
+
+    > div:not(.project-list) {
+        padding-bottom: 32px;
+
+        > div {
+            width: calc((50vw - (32px + 16px)) / 2);
+        }
+    }
+
+    .project-list {
+        -ms-overflow-style: none; /* Internet Explorer 10+ */
+        scrollbar-width: none; /* Firefox, Safari 18.2+, Chromium 121+ */
+        ::-webkit-scrollbar {
+            display: none; /* Older Safari and Chromium */
+        }
+
+        overflow: scroll;
+        height: 100vh;
+
+        #clone {
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        > div > div {
+            margin-bottom: 16px;
+            position: relative;
+
+            > a {
+                position: relative;
+                text-decoration: underline;
+
+                display: flex;
+                gap: 4px;
+            }
+            p {
+                position: absolute;
+                bottom: 16px;
+                left: 16px;
+
+                &.dark {
+                    color: #030302;
+                }
+            }
+        }
+        .image-container {
+            position: relative;
+            overflow: hidden;
+            aspect-ratio: 4/3;
+            width: calc(50vw - 16px);
+            border-radius: 8px;
+
+            img {
+                object-fit: cover;
+                width: 100%;
+                height: auto;
+                transform-origin: bottom;
+                scale: var(--scale-image, 1);
+                transform: translateY(var(--offset, 0));
+            }
+        }
+    }
+}

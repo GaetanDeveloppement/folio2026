@@ -1,0 +1,22 @@
+[
+  {
+    "title": "Aesop",
+    "image": "aesop-still-1.jpg",
+    "alt": "Aesop perfume bottle still render",
+    "color": "light",
+    "link": "https://gaetan.cool"
+  },
+  {
+    "title": "Aesop",
+    "image": "aesop-still-2.jpg",
+    "alt": "Rock still render",
+    "color": "dark"
+  },
+  {
+    "title": "Nolka",
+    "image": "nolka-1.jpg",
+    "alt": "Nolka logo",
+    "color": "light",
+    "link": "https://gaetan.cool"
+  }
+]
