@@ -88,7 +88,6 @@ main {
             }
         }
         .image-container {
-            position: relative;
             overflow: hidden;
             aspect-ratio: 4/3;
             width: calc(50vw - 16px);
@@ -98,9 +97,9 @@ main {
                 object-fit: cover;
                 width: 100%;
                 height: auto;
-                transform-origin: bottom;
-                scale: var(--scale-image, 1);
+                transform-origin: center;
                 transform: translateY(var(--offset, 0));
+                scale: var(--scale-image, 1);
             }
         }
     }
