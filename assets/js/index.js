@@ -1,25 +1,29 @@
 window.addEventListener("load", function () {
   const images = [];
+  const observers = [];
   const scale = document.body.style.getPropertyValue("--scale-image");
   const scrollContainerHeight = document.body.clientHeight;
+  const imagesFunc = document.querySelectorAll("#scroller .parallax");
 
-  document.querySelectorAll("#scroller .parallax").forEach((item, index) => {
-    // 868 -> 868
-    const imageHeight = parseInt(item.offsetHeight) * scale;
-    // 620 -> 620
-    const containerHeight = parseInt(item.parentNode.offsetHeight);
-    const gap = (imageHeight - containerHeight) / scale;
-    console.log(
-      "imageHeight",
-      imageHeight,
-      "containerHeight",
-      containerHeight,
-      "gap",
-      gap,
-    );
+  imagesFunc.forEach((item, index) => {
+    var imageHeight = parseInt(item.offsetHeight) * scale;
+    var containerHeight = parseInt(item.parentNode.offsetHeight);
+    var gap = (imageHeight - containerHeight) / scale;
 
     item.dataset.index = index;
-    images.push({ imageHeight, containerHeight, gap });
+    images.push({ containerHeight, gap });
+
+    var observer = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        const imgHeight = parseInt(entry.target.offsetHeight) * scale;
+        const contHeight = parseInt(entry.target.parentNode.offsetHeight);
+        const newGap = (imgHeight - contHeight) / scale;
+
+        images[index] = { containerHeight: contHeight, gap: newGap };
+      }
+    });
+    observer.observe(item);
+    observers.push(observer); // Store for cleanup
   });
 
   const scroller = document.getElementById("scroller");
@@ -44,7 +48,7 @@ window.addEventListener("load", function () {
 
     items.forEach((item) => {
       const index = item.dataset["index"];
-      const { containerHeight, imageHeight, gap } = images[index];
+      const { containerHeight, gap } = images[index];
       const y = item.y;
       const pos = {
         top: y + containerHeight,
@@ -68,4 +72,8 @@ window.addEventListener("load", function () {
   }
 
   requestAnimationFrame(raf);
+
+  window.addEventListener("beforeunload", () => {
+    observers.forEach((obs) => obs.disconnect());
+  });
 });

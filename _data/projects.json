@@ -1,16 +1,30 @@
 [
   {
-    "title": "Aesop",
+    "title": "Aesop — r&d",
     "image": "aesop-still-1.jpg",
     "alt": "Aesop perfume bottle still render",
     "color": "light",
     "link": "https://gaetan.cool"
   },
   {
-    "title": "Aesop",
+    "title": "Aesop — r&d",
     "image": "aesop-still-2.jpg",
     "alt": "Rock still render",
     "color": "dark"
+  },
+  {
+    "title": "PMC — branding",
+    "image": "pmc-2.png",
+    "alt": "Logo for pmc high school",
+    "color": "light",
+    "link": "https://les-anciens-de-pmc.netlify.app/"
+  },
+  {
+    "title": "PMC — webdesign",
+    "image": "pmc-1.png",
+    "alt": "Wedesign for pmc high school",
+    "color": "dark",
+    "link": "https://les-anciens-de-pmc.netlify.app/"
   },
   {
     "title": "Nolka",

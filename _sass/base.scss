@@ -40,14 +40,20 @@ main {
     grid-template-columns: auto auto;
     justify-content: space-between;
     grid-gap: 32px;
-    padding: 32px 32px 0px;
+    padding: 32px 32px;
     overflow: none;
 
-    > div:not(.project-list) {
-        padding-bottom: 32px;
+    @media screen and (max-width: 768px) {
+        grid-template-columns: auto;
+        gap: 0;
+    }
 
+    > div:not(.project-list) {
         > div {
             width: calc((50vw - (32px + 16px)) / 2);
+            @media screen and (max-width: 768px) {
+                width: 100%;
+            }
         }
     }
 
@@ -57,6 +63,7 @@ main {
         ::-webkit-scrollbar {
             display: none; /* Older Safari and Chromium */
         }
+        border-radius: 8px;
 
         overflow: scroll;
         height: 100vh;
@@ -92,6 +99,10 @@ main {
             aspect-ratio: 4/3;
             width: calc(50vw - 16px);
             border-radius: 8px;
+
+            @media screen and (max-width: 768px) {
+                width: 100%;
+            }
 
             img {
                 object-fit: cover;
