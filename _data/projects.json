@@ -17,6 +17,7 @@
     "image": "pmc-2.png",
     "alt": "Logo for pmc high school",
     "color": "light",
+    "hex": "#F8FAFF",
     "link": "https://les-anciens-de-pmc.netlify.app/"
   },
   {
@@ -31,6 +32,7 @@
     "image": "nolka-1.jpg",
     "alt": "Nolka logo",
     "color": "light",
+    "hex": "#96B792",
     "link": "https://gaetan.cool"
   }
 ]

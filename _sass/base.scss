@@ -9,10 +9,10 @@ $bodyFont:
     src: url("./fonts/P22MackinacProBook.otf");
 }
 
-/* @font-face {
-    font-family: Mackinac Medium;
+@font-face {
+    font-family: "Mackinac Medium";
     src: url("./fonts/P22MackinacProMedium.otf");
-} */
+}
 
 body {
     height: 100vh;
@@ -22,8 +22,12 @@ body {
 
     h1,
     p {
-        font-family: "Mackinac Book";
+        font-family: "Mackinac Medium";
         font-size: 14px;
+
+        @media screen and (max-width: 768px) {
+            font-size: 16px;
+        }
     }
 
     em {
@@ -31,24 +35,29 @@ body {
         color: #a49f93;
     }
 
+    .info > div p:nth-of-type(2) {
+        margin-top: 16px;
+    }
+
     overflow: hidden;
 }
 
 main {
-    height: 100vh;
+    height: 100svh;
     display: grid;
     grid-template-columns: auto auto;
     justify-content: space-between;
     grid-gap: 32px;
-    padding: 32px 32px;
-    overflow: none;
+    padding: 32px;
+    overflow: hidden;
 
     @media screen and (max-width: 768px) {
         grid-template-columns: auto;
-        gap: 0;
+        gap: 64px;
+        padding: 12px;
     }
 
-    > div:not(.project-list) {
+    > .info {
         > div {
             width: calc((50vw - (32px + 16px)) / 2);
             @media screen and (max-width: 768px) {
@@ -57,13 +66,17 @@ main {
         }
     }
 
+    .projects {
+        overflow: hidden;
+        border-radius: 8px;
+    }
+
     .project-list {
         -ms-overflow-style: none; /* Internet Explorer 10+ */
         scrollbar-width: none; /* Firefox, Safari 18.2+, Chromium 121+ */
         ::-webkit-scrollbar {
             display: none; /* Older Safari and Chromium */
         }
-        border-radius: 8px;
 
         overflow: scroll;
         height: 100vh;

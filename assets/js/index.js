@@ -6,24 +6,24 @@ window.addEventListener("load", function () {
   const imagesFunc = document.querySelectorAll("#scroller .parallax");
 
   imagesFunc.forEach((item, index) => {
-    var imageHeight = parseInt(item.offsetHeight) * scale;
-    var containerHeight = parseInt(item.parentNode.offsetHeight);
-    var gap = (imageHeight - containerHeight) / scale;
+    const parent = item.parentNode; // Cache parent reference
+    let imageHeight = item.offsetHeight * scale;
+    let containerHeight = parent.offsetHeight;
+    let gap = (imageHeight - containerHeight) / scale;
 
     item.dataset.index = index;
     images.push({ containerHeight, gap });
 
-    var observer = new ResizeObserver((entries) => {
-      for (let entry of entries) {
-        const imgHeight = parseInt(entry.target.offsetHeight) * scale;
-        const contHeight = parseInt(entry.target.parentNode.offsetHeight);
-        const newGap = (imgHeight - contHeight) / scale;
-
-        images[index] = { containerHeight: contHeight, gap: newGap };
-      }
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0]; // Only one entry per observer
+      imageHeight = entry.target.offsetHeight * scale;
+      containerHeight = parent.offsetHeight;
+      gap = (imageHeight - containerHeight) / scale;
+      images[index] = { containerHeight, gap };
     });
+
     observer.observe(item);
-    observers.push(observer); // Store for cleanup
+    observers.push(observer);
   });
 
   const scroller = document.getElementById("scroller");
@@ -34,7 +34,6 @@ window.addEventListener("load", function () {
   clone.id = "clone";
 
   const lenis = new Lenis({
-    autoRaf: true,
     infinite: true,
     syncTouch: true,
     wrapper,

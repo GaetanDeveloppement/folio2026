@@ -10,30 +10,33 @@
   </head>
   <body style="--scale-image: 1.25;">
       <main>
-        <div>
+        <div class="info">
             <div>
                 {{ content }}
             </div>
         </div>
-        <div id="wrapper" class="project-list">
-            <div id="scroller">
-                {% for project in site.data.projects %}
-                    <div>
-                        {% if project.link %}
-                            <a href={{project.link}}>
+
+        <div class="projects">
+            <div id="wrapper" class="project-list">
+                <div id="scroller">
+                    {% for project in site.data.projects %}
+                        <div>
+                            {% if project.link %}
+                                <a href={{project.link}}>
+                                    <div class="image-container">
+                                        <img class="parallax" src="../assets/image/{{ project.image }}" alt={{project.alt}} />
+                                    </div>
+                                    <p class={{project.color}} style="color: {{project.hex}};">{{ project.title }}</p>
+                                </a>
+                            {% else %}
                                 <div class="image-container">
                                     <img class="parallax" src="../assets/image/{{ project.image }}" alt={{project.alt}} />
                                 </div>
                                 <p class={{project.color}}>{{ project.title }}</p>
-                            </a>
-                        {% else %}
-                            <div class="image-container">
-                                <img class="parallax" src="../assets/image/{{ project.image }}" alt={{project.alt}} />
-                            </div>
-                            <p class={{project.color}}>{{ project.title }}</p>
-                        {% endif %}
-                    </div>
-                {% endfor %}
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
             </div>
         </div>
       </main>
