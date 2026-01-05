@@ -75,7 +75,7 @@ window.addEventListener("load", function () {
         lastOffset === undefined ||
         Math.abs(res - lastOffset) > updateThreshold
       ) {
-        item.style.setProperty("--offset", -res + "px");
+        item.style.transform = `translateY(${-res}px)`;
         lastOffsets.set(item, res);
       }
     });

@@ -122,7 +122,6 @@ main {
                 width: 100%;
                 height: auto;
                 transform-origin: center;
-                transform: translateY(var(--offset, 0));
                 scale: var(--scale-image, 1);
             }
         }
