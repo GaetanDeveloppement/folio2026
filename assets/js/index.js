@@ -1,12 +1,13 @@
 window.addEventListener("load", function () {
   const images = [];
   const observers = [];
-  const scale = document.body.style.getPropertyValue("--scale-image");
+  const scale =
+    parseFloat(document.body.style.getPropertyValue("--scale-image")) || 1;
   const scrollContainerHeight = document.body.clientHeight;
   const imagesFunc = document.querySelectorAll("#scroller .parallax");
 
   imagesFunc.forEach((item, index) => {
-    const parent = item.parentNode; // Cache parent reference
+    const parent = item.parentNode;
     let imageHeight = item.offsetHeight * scale;
     let containerHeight = parent.offsetHeight;
     let gap = (imageHeight - containerHeight) / scale;
@@ -15,7 +16,7 @@ window.addEventListener("load", function () {
     images.push({ containerHeight, gap });
 
     const observer = new ResizeObserver((entries) => {
-      const entry = entries[0]; // Only one entry per observer
+      const entry = entries[0];
       imageHeight = entry.target.offsetHeight * scale;
       containerHeight = parent.offsetHeight;
       gap = (imageHeight - containerHeight) / scale;
@@ -42,28 +43,40 @@ window.addEventListener("load", function () {
 
   const items = document.querySelectorAll(".parallax");
 
+  const lastOffsets = new Map();
+  const updateThreshold = 0.5;
+
   function raf(time) {
     lenis.raf(time);
 
     items.forEach((item) => {
       const index = item.dataset["index"];
       const { containerHeight, gap } = images[index];
-      const y = item.y;
+
+      const parent = item.parentNode;
+      const parentRect = parent.getBoundingClientRect();
+      const y = parentRect.top;
+
       const pos = {
         top: y + containerHeight,
         bottom: y,
       };
 
-      if (pos.top >= 0 && pos.bottom < scrollContainerHeight) {
-        // 0 / 1
-        const factor = pos.top / (scrollContainerHeight + containerHeight);
+      // 0 / 1
+      const factor = pos.top / (scrollContainerHeight + containerHeight);
 
-        // -1 / 1
-        const power = (factor - 0.5) * 2;
+      // -1 / 1
+      const power = (factor - 0.5) * 2;
 
-        const res = (gap / 2) * power;
+      const res = (gap / 2) * power;
 
+      const lastOffset = lastOffsets.get(item);
+      if (
+        lastOffset === undefined ||
+        Math.abs(res - lastOffset) > updateThreshold
+      ) {
         item.style.setProperty("--offset", -res + "px");
+        lastOffsets.set(item, res);
       }
     });
 
