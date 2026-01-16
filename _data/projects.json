@@ -1,20 +1,20 @@
 [
   {
     "title": "Aesop — r&d",
-    "image": "aesop-still-1.jpg",
+    "image": "aesop-still-1.webp",
     "alt": "Aesop perfume bottle still render",
     "color": "light",
     "link": "https://gaetan.cool"
   },
   {
     "title": "Aesop — r&d",
-    "image": "aesop-still-2.jpg",
+    "image": "aesop-still-2.webp",
     "alt": "Rock still render",
     "color": "dark"
   },
   {
     "title": "PMC — branding",
-    "image": "pmc-2.png",
+    "image": "pmc-2.webp",
     "alt": "Logo for pmc high school",
     "color": "light",
     "hex": "#F8FAFF",
@@ -22,14 +22,14 @@
   },
   {
     "title": "PMC — webdesign",
-    "image": "pmc-1.png",
+    "image": "pmc-1.webp",
     "alt": "Wedesign for pmc high school",
     "color": "dark",
     "link": "https://les-anciens-de-pmc.netlify.app/"
   },
   {
     "title": "Nolka",
-    "image": "nolka-1.jpg",
+    "image": "nolka-1.webp",
     "alt": "Nolka logo",
     "color": "light",
     "hex": "#96B792",
