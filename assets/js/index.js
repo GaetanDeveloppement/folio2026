@@ -7,7 +7,7 @@ window.addEventListener("load", function () {
   const imagesFunc = document.querySelectorAll("#scroller .parallax");
 
   imagesFunc.forEach((item, index) => {
-    const parent = item.parentNode;
+    const parent = item.parentNode.parentNode;
     let imageHeight = item.offsetHeight * scale;
     let containerHeight = parent.offsetHeight;
     let gap = (imageHeight - containerHeight) / scale;

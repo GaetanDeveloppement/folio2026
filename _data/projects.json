@@ -1,38 +1,44 @@
 [
   {
     "title": "Aesop — r&d",
-    "image": "aesop-still-1.webp",
+    "image": "aesop-1.webp",
     "alt": "Aesop perfume bottle still render",
-    "color": "light",
-    "link": "https://gaetan.cool"
+    "color": "light"
   },
   {
     "title": "Aesop — r&d",
-    "image": "aesop-still-2.webp",
+    "image": "aesop-2.webp",
     "alt": "Rock still render",
     "color": "dark"
   },
   {
     "title": "PMC — branding",
-    "image": "pmc-2.webp",
+    "image": "pmc-1.webp",
     "alt": "Logo for pmc high school",
     "color": "light",
     "hex": "#F8FAFF",
-    "link": "https://les-anciens-de-pmc.netlify.app/"
+    "link": "https://lesanciensdepmc.com/"
   },
   {
     "title": "PMC — webdesign",
-    "image": "pmc-1.webp",
+    "image": "pmc-2.webp",
     "alt": "Wedesign for pmc high school",
     "color": "dark",
-    "link": "https://les-anciens-de-pmc.netlify.app/"
+    "link": "https://lesanciensdepmc.com/"
   },
   {
-    "title": "Nolka",
-    "image": "nolka-1.webp",
-    "alt": "Nolka logo",
+    "title": "Phronesis — interactive machine",
+    "image": "phronesis-1.webp",
+    "alt": "Phronesis' interactive machine",
     "color": "light",
-    "hex": "#96B792",
-    "link": "https://gaetan.cool"
+    "hex": "#BFBDBE"
+  },
+  {
+    "title": "Terapolis — webgl experience",
+    "image": "terapolis-1.webp",
+    "alt": "Terapolis cover image",
+    "color": "light",
+    "hex": "#FFFEFF",
+    "link": "https://experience.terapolis.osuny.site/"
   }
 ]
