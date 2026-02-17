@@ -6,12 +6,6 @@
     "color": "light"
   },
   {
-    "title": "Aesop — r&d",
-    "image": "aesop-2.webp",
-    "alt": "Rock still render",
-    "color": "dark"
-  },
-  {
     "title": "PMC — branding",
     "image": "pmc-1.webp",
     "alt": "Logo for pmc high school",
@@ -34,11 +28,25 @@
     "hex": "#BFBDBE"
   },
   {
+    "title": "Aesop — r&d",
+    "image": "aesop-2.webp",
+    "alt": "Rock still render",
+    "color": "dark"
+  },
+  {
     "title": "Terapolis — webgl experience",
     "image": "terapolis-1.webp",
     "alt": "Terapolis cover image",
     "color": "light",
     "hex": "#FFFEFF",
     "link": "https://experience.terapolis.osuny.site/"
+  },
+  {
+    "title": "Shark — vfx",
+    "image": "shark.webp",
+    "alt": "Close up of a motorcycle rear wheel at night",
+    "color": "light",
+    "hex": "#FFF",
+    "link": "https://www.youtube.com/watch?v=gM2pTzctP9c"
   }
 ]
