@@ -21,31 +21,31 @@
                 <div id="scroller">
                     {% for project in site.data.projects %}
                         <div>
-                            {% if project.link %}
-                                <a href={{project.link}}>
+                            {% if project.page %}
+                                <a href="/{{ project.page }}.html" data-transition="true">
                                     <div class="image-container">
                                         {% assign image_name = project.image | split: '.' | first %}
                                         <picture>
                                             <source
                                                 sizes="(max-width: 768px) calc(100vw - 24px), calc(50vw - 32px)"
                                                 srcset="/assets/image/generated/{{ image_name }}-326.webp 326w,
-                                                      /assets/image/generated/{{ image_name }}-476.webp 476w,
-                                                      /assets/image/generated/{{ image_name }}-726.webp 726w,
-                                                      /assets/image/generated/{{ image_name }}-780.webp 780w,
-                                                      /assets/image/generated/{{ image_name }}-985.webp 985w,
-                                                      /assets/image/generated/{{ image_name }}-1210.webp 1210w,
-                                                      /assets/image/generated/{{ image_name }}-1710.webp 1710w"
+                                                        /assets/image/generated/{{ image_name }}-476.webp 476w,
+                                                        /assets/image/generated/{{ image_name }}-726.webp 726w,
+                                                        /assets/image/generated/{{ image_name }}-780.webp 780w,
+                                                        /assets/image/generated/{{ image_name }}-985.webp 985w,
+                                                        /assets/image/generated/{{ image_name }}-1210.webp 1210w,
+                                                        /assets/image/generated/{{ image_name }}-1710.webp 1710w"
                                                 type="image/webp"
                                             >
                                             <source
                                                 sizes="(max-width: 768px) calc(100vw - 24px), calc(50vw - 32px)"
                                                 srcset="/assets/image/generated/{{ image_name }}-326.png 326w,
-                                                      /assets/image/generated/{{ image_name }}-476.png 476w,
-                                                      /assets/image/generated/{{ image_name }}-726.png 726w,
-                                                      /assets/image/generated/{{ image_name }}-780.png 780w,
-                                                      /assets/image/generated/{{ image_name }}-985.png 985w,
-                                                      /assets/image/generated/{{ image_name }}-1210.png 1210w,
-                                                      /assets/image/generated/{{ image_name }}-1710.png 1710w"
+                                                        /assets/image/generated/{{ image_name }}-476.png 476w,
+                                                        /assets/image/generated/{{ image_name }}-726.png 726w,
+                                                        /assets/image/generated/{{ image_name }}-780.png 780w,
+                                                        /assets/image/generated/{{ image_name }}-985.png 985w,
+                                                        /assets/image/generated/{{ image_name }}-1210.png 1210w,
+                                                        /assets/image/generated/{{ image_name }}-1710.png 1710w"
                                                 type="image/png"
                                             >
                                             <img class="parallax" src="../assets/image/{{ project.image }}" alt={{project.alt}} />

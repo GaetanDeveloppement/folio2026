@@ -1,28 +1,24 @@
-$backgroundColor: #030302;
-$bodyColor: #fcf2d7;
+$backgroundColor: #fff;
+$bodyColor: #000;
+$altColor: #c4c4c4;
 $bodyFont:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 
-@font-face {
-    font-family: "Mackinac Book";
-    src: url("./fonts/P22MackinacProBook.otf");
-}
-
-@font-face {
-    font-family: "Mackinac Medium";
-    src: url("./fonts/P22MackinacProMedium.otf");
-}
-
 body {
     height: 100vh;
-    background: $backgroundColor;
-    color: $bodyColor;
+    background: #fff;
+    color: #000;
     font-family: $bodyFont;
 
+    @media (prefers-color-scheme: dark) {
+        background: #000;
+        color: #fff;
+    }
+
     h1,
-    p {
-        font-family: "Mackinac Medium";
+    p,
+    a {
         font-size: 14px;
 
         @media screen and (max-width: 768px) {
@@ -30,13 +26,21 @@ body {
         }
     }
 
+    a {
+        text-decoration: underline;
+    }
+
     em {
         font-style: normal;
-        color: #a49f93;
+        color: $altColor;
+    }
+
+    .info {
+        margin-top: 24px;
     }
 
     .info > div p:nth-of-type(2) {
-        margin-top: 16px;
+        margin-top: 8px;
     }
 
     overflow: hidden;
@@ -48,7 +52,7 @@ main {
     grid-template-columns: auto auto;
     justify-content: space-between;
     grid-gap: 32px;
-    padding: 32px;
+    padding: 0px 0px 0px 32px;
     overflow: hidden;
 
     @media screen and (max-width: 768px) {
@@ -68,7 +72,7 @@ main {
 
     .projects {
         overflow: hidden;
-        border-radius: 8px;
+        /* border-radius: 8px; */
     }
 
     .project-list {
@@ -87,15 +91,11 @@ main {
         }
 
         > div > div {
-            margin-bottom: 16px;
+            margin-bottom: 4px;
             position: relative;
 
             > a {
-                position: relative;
-                text-decoration: underline;
-
                 display: flex;
-                gap: 4px;
             }
             p {
                 position: absolute;
@@ -107,11 +107,15 @@ main {
                 }
             }
         }
+
         .image-container {
             overflow: hidden;
             aspect-ratio: 4/3;
-            width: calc(50vw - 16px);
-            border-radius: 8px;
+            width: 50vw;
+            /* border-radius: 2px; */
+            border-bottom-left-radius: 4px;
+            border-top-left-radius: 4px;
+            position: relative;
 
             @media screen and (max-width: 768px) {
                 width: 100%;

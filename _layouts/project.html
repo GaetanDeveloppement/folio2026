@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="{{ site.lang | default: "fr-FR" }}">
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8">
+    <title>{{ page.title }} - {{ site.title }}</title>
+    <link rel="stylesheet" href="{{ "/assets/css/main.css" | relative_url }}">
+    <link rel="stylesheet" href="https://unpkg.com/lenis@1.3.15/dist/lenis.css">
+    <link rel="icon" type="image/x-icon" href="../Assets/image/favicon.png">
+  </head>
+  <body style="--scale-image: 1.25;" data-layout="project">
+      <main>
+        <div class="info">
+            <div>
+                {{ content }}
+                <a href="/" data-transition="true">back</a>
+            </div>
+        </div>
+
+        <div class="projects">
+            <div id="wrapper" class="project-list">
+                <div id="scroller">
+                    {% assign project_data = site.data.projects | where: "title", page.project_title | first %}
+                    {% for images in project_data.images %}
+                        <div>
+                            <div class="image-container">
+                                {% assign image_name = images | split: '.' | first %}
+                                <picture>
+                                    <source
+                                        sizes="(max-width: 768px) calc(100vw - 24px), calc(50vw - 32px)"
+                                        srcset="/assets/image/generated/{{ image_name }}-326.webp 326w,
+                                                /assets/image/generated/{{ image_name }}-476.webp 476w,
+                                                /assets/image/generated/{{ image_name }}-726.webp 726w,
+                                                /assets/image/generated/{{ image_name }}-780.webp 780w,
+                                                /assets/image/generated/{{ image_name }}-985.webp 985w,
+                                                /assets/image/generated/{{ image_name }}-1210.webp 1210w,
+                                                /assets/image/generated/{{ image_name }}-1710.webp 1710w"
+                                        type="image/webp"
+                                    >
+                                    <source
+                                        sizes="(max-width: 768px) calc(100vw - 24px), calc(50vw - 32px)"
+                                        srcset="/assets/image/generated/{{ image_name }}-326.png 326w,
+                                                /assets/image/generated/{{ image_name }}-476.png 476w,
+                                                /assets/image/generated/{{ image_name }}-726.png 726w,
+                                                /assets/image/generated/{{ image_name }}-780.png 780w,
+                                                /assets/image/generated/{{ image_name }}-985.png 985w,
+                                                /assets/image/generated/{{ image_name }}-1210.png 1210w,
+                                                /assets/image/generated/{{ image_name }}-1710.png 1710w"
+                                        type="image/png"
+                                    >
+                                    <img class="parallax" src="../assets/image/{{ project.image }}" alt={{project.alt}} />
+                                </picture>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+      </main>
+
+      <script src="https://unpkg.com/lenis@1.3.15/dist/lenis.min.js"></script>
+      <script src="../assets/js/index.js"></script>
+  </body>
+</html>
