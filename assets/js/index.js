@@ -34,6 +34,12 @@ window.addEventListener("load", function () {
   scroller.after(clone);
   clone.id = "clone";
 
+  // Remove any canvases cloned from already-initialized dither wrappers
+  clone.querySelectorAll(".dither-wrap canvas").forEach((c) => c.remove());
+
+  // Initialize dither on the cloned images
+  window.dispatchEvent(new CustomEvent("ditherInitClone", { detail: clone }));
+
   const lenis = new Lenis({
     infinite: true,
     syncTouch: true,
