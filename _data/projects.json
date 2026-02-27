@@ -3,7 +3,6 @@
     "title": "Aesop — r&d",
     "image": "aesop-1.webp",
     "alt": "Aesop perfume bottle still render",
-    "hex": "#fff",
     "page": "aesop",
     "images": [
       "aesop-1.webp",
@@ -18,7 +17,6 @@
     "title": "PMC — branding",
     "image": "pmc-1.webp",
     "alt": "Logo for pmc high school",
-    "hex": "#F8FAFF",
     "page": "pmc",
     "images": [
       "pmc-1.webp",
@@ -33,7 +31,6 @@
     "title": "Phronesis — interactive machine",
     "image": "phronesis-1.webp",
     "alt": "Phronesis' interactive machine",
-    "hex": "#BFBDBE",
     "page": "phronesis",
     "images": [
       "phronesis-1.webp",
@@ -48,7 +45,6 @@
     "title": "Terapolis — webgl experience",
     "image": "terapolis-1.webp",
     "alt": "Terapolis cover image",
-    "hex": "#FFFEFF",
     "page": "terapolis",
     "images": [
       "terapolis-1.webp",
@@ -63,7 +59,6 @@
     "title": "Shark — vfx",
     "image": "shark.webp",
     "alt": "Close up of a motorcycle rear wheel at night",
-    "hex": "#FFF",
     "page": "shark",
     "images": [
       "shark.webp",

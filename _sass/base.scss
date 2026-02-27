@@ -19,11 +19,11 @@ body {
     h1,
     p,
     a {
-        font-size: 14px;
+        font-size: 16px;
 
-        @media screen and (max-width: 768px) {
+        /* @media screen and (max-width: 768px) {
             font-size: 16px;
-        }
+        } */
     }
 
     a {
@@ -103,7 +103,7 @@ main {
         }
 
         > div > div {
-            margin-bottom: 4px;
+            margin-bottom: 8px;
             position: relative;
 
             > a {
@@ -113,10 +113,9 @@ main {
                 position: absolute;
                 bottom: 16px;
                 left: 16px;
-
-                &.dark {
-                    color: #030302;
-                }
+                padding: 0px 8px;
+                color: white;
+                background-color: black;
             }
         }
 
@@ -124,9 +123,6 @@ main {
             overflow: hidden;
             aspect-ratio: 4/3;
             width: 50vw;
-            /* border-radius: 2px; */
-            border-bottom-left-radius: 4px;
-            border-top-left-radius: 4px;
             position: relative;
 
             @media screen and (max-width: 768px) {
