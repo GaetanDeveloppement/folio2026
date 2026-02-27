@@ -188,7 +188,7 @@ class DitherCanvas {
     this._setup();
 
     this.colorize = 0.0;
-    this.dissolve = 0.0;
+    this.dissolve = 1.0;
     this.mouse = [-1, -1];
     this._rafId = null;
 
@@ -213,6 +213,7 @@ class DitherCanvas {
       this._resize();
       this.ro = new ResizeObserver(() => this._resize());
       this.ro.observe(imgEl.parentElement);
+      this.dissolveFromBlack(1500);
     };
 
     if (imgEl.complete && imgEl.naturalWidth > 0) {
@@ -376,6 +377,22 @@ class DitherCanvas {
       const tick = (now) => {
         const p = Math.min((now - start) / duration, 1.0);
         this.dissolve = p;
+        this.render();
+        if (p < 1.0) requestAnimationFrame(tick);
+        else resolve();
+      };
+      requestAnimationFrame(tick);
+    });
+  }
+
+  dissolveFromBlack(duration) {
+    this.dissolve = 1.0;
+    this.render();
+    return new Promise((resolve) => {
+      const start = performance.now();
+      const tick = (now) => {
+        const p = Math.min((now - start) / duration, 1.0);
+        this.dissolve = 1.0 - p;
         this.render();
         if (p < 1.0) requestAnimationFrame(tick);
         else resolve();

@@ -94,4 +94,20 @@ window.addEventListener("load", function () {
   window.addEventListener("beforeunload", () => {
     observers.forEach((obs) => obs.disconnect());
   });
+
+  document.addEventListener("click", (e) => {
+    const link = e.target.closest("a[href]");
+    if (!link) return;
+    const href = link.getAttribute("href");
+    if (!href || href.startsWith("http") || href.startsWith("mailto")) return;
+
+    e.preventDefault();
+    const instances = window._ditherInstances || [];
+    const DURATION = 1500;
+    Promise.all(instances.map((dc) => dc.dissolveToBlack(DURATION)))
+      .then(() => new Promise((r) => setTimeout(r, 50)))
+      .then(() => {
+        window.location.href = href;
+      });
+  });
 });
