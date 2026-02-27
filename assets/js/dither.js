@@ -47,7 +47,8 @@ const FRAG = `
                     float t       = texture2D(u_bayer, bayerUV).r;
 
                     // B&W
-                    vec3 bw = vec3(step(t, lum));
+                    // vec3 bw = vec3(step(t, lum));
+                    vec3 bw = mix(vec3(0.0, 0.0, 0.0), vec3(0.9, 0.9, 0.9), step(t, lum));
 
                     // Color: find two nearest palette colors, dither between them
                     vec3 c0 = paletteColor(0.0);
