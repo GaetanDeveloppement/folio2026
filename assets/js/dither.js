@@ -22,6 +22,7 @@ const FRAG = `
                 uniform sampler2D u_palette;
                 uniform vec2      u_resolution;
                 uniform float     u_colorize;
+                uniform float     u_dissolve;
                 uniform vec2      u_mouse;
 
                 varying vec2 v_uv;
@@ -79,6 +80,13 @@ const FRAG = `
                     float effectiveColorize = clamp(u_colorize + radial * 1.0, 0.0, 1.0);
 
                     vec3 result = (dissolveT < effectiveColorize) ? color : bw;
+
+                    // Dissolve to black on navigation: luminance-ordered, bayer-dithered
+                    if (u_dissolve > 0.0) {
+                        float spread = 0.4 * (1.0 - u_dissolve);
+                        float mask = step(lum, u_dissolve + (t - 0.5) * spread);
+                        result = mix(result, vec3(0.0), mask);
+                    }
 
                     gl_FragColor = vec4(result, 1.0);
                 }
@@ -180,6 +188,7 @@ class DitherCanvas {
     this._setup();
 
     this.colorize = 0.0;
+    this.dissolve = 0.0;
     this.mouse = [-1, -1];
     this._rafId = null;
 
@@ -252,6 +261,7 @@ class DitherCanvas {
       palette: gl.getUniformLocation(prog, "u_palette"),
       resolution: gl.getUniformLocation(prog, "u_resolution"),
       colorize: gl.getUniformLocation(prog, "u_colorize"),
+      dissolve: gl.getUniformLocation(prog, "u_dissolve"),
       mouse: gl.getUniformLocation(prog, "u_mouse"),
     };
 
@@ -360,6 +370,20 @@ class DitherCanvas {
     this._rafId = requestAnimationFrame(tick);
   }
 
+  dissolveToBlack(duration) {
+    return new Promise((resolve) => {
+      const start = performance.now();
+      const tick = (now) => {
+        const p = Math.min((now - start) / duration, 1.0);
+        this.dissolve = p;
+        this.render();
+        if (p < 1.0) requestAnimationFrame(tick);
+        else resolve();
+      };
+      requestAnimationFrame(tick);
+    });
+  }
+
   render() {
     if (!this.textureReady) return;
     const gl = this.gl;
@@ -378,6 +402,7 @@ class DitherCanvas {
     gl.uniform1i(this.u.palette, 2);
 
     gl.uniform1f(this.u.colorize, this.colorize);
+    gl.uniform1f(this.u.dissolve, this.dissolve);
     gl.uniform2f(this.u.mouse, this.mouse[0], this.mouse[1]);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -387,9 +412,11 @@ class DitherCanvas {
 // -----------------------------------------------------------------------
 // Init
 // -----------------------------------------------------------------------
+window._ditherInstances = [];
+
 function initDither(root = document) {
   root.querySelectorAll(".dither-wrap img.parallax").forEach((img) => {
-    new DitherCanvas(img);
+    window._ditherInstances.push(new DitherCanvas(img));
   });
 }
 
