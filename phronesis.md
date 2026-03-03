@@ -5,6 +5,6 @@ project_title: "Phronesis — interactive machine"
 ---
 
 # Phronesis
-*Design & making*
+*Design & ingénierie*
 
-This is new text now... Impressed ? Yeah me too
+This is new text now...

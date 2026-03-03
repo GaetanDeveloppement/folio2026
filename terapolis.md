@@ -7,4 +7,4 @@ project_title: "Terapolis — webgl experience"
 # Terapolis
 *Modeling and design*
 
-This is new text now... Impressed ? Yeah me too
+This is new text now...

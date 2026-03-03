@@ -7,4 +7,4 @@ project_title: "Aesop — r&d"
 # Aesop
 *3d r&d*
 
-This is new text now... Impressed ? Yeah me too
+This is new text now...
