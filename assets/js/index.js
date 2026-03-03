@@ -1,17 +1,29 @@
 const PARALLAX_SCALE_DEFAULT = 1;
 const UPDATE_THRESHOLD = 0.5;
-const DISSOLVE_DURATION = 1500;
-const POST_DISSOLVE_DELAY = 50;
 const SCROLL_POSITION_KEY = "carousel-scroll-position";
 
-window.addEventListener("load", function () {
-  const images = [];
-  const observers = [];
+let images = [];
+let observers = [];
+let lenis = null;
+let rafId = null;
+let lastOffsets = new Map();
+let items = [];
+let scrollContainerHeight = 0;
+
+function getIsProjectPage() {
+  return document.body.dataset.layout === "project";
+}
+
+function initScroll() {
+  images = [];
+  observers = [];
+  lastOffsets = new Map();
+
   const scale =
     parseFloat(getComputedStyle(document.body).getPropertyValue("--scale-image")) || PARALLAX_SCALE_DEFAULT;
-  const scrollContainerHeight = document.body.clientHeight;
+  scrollContainerHeight = document.body.clientHeight;
   const imageElements = document.querySelectorAll("#scroller .parallax");
-  const isProjectPage = document.body.hasAttribute("data-layout");
+  const isProjectPage = getIsProjectPage();
 
   imageElements.forEach(function (item, index) {
     const parent = item.parentNode.parentNode;
@@ -53,7 +65,7 @@ window.addEventListener("load", function () {
     window.dispatchEvent(new CustomEvent("ditherInitClone", { detail: clone }));
   }
 
-  const lenis = new Lenis({
+  lenis = new Lenis({
     infinite: true,
     syncTouch: true,
     wrapper,
@@ -69,18 +81,19 @@ window.addEventListener("load", function () {
     sessionStorage.removeItem(restoreKey);
   }
 
-  const items = document.querySelectorAll(".parallax");
-  const lastOffsets = new Map();
-  let rafId = null;
-  let isNavigating = false;
+  items = Array.from(document.querySelectorAll(".parallax"));
 
   function raf(time) {
     lenis.raf(time);
 
     items.forEach(function (item) {
       const index = item.dataset["index"];
-      const { containerHeight, gap } = images[index];
+      const data = images[index];
+      if (!data) {
+        return;
+      }
 
+      const { containerHeight, gap } = data;
       const parent = item.parentNode;
       const parentRect = parent.getBoundingClientRect();
       const y = parentRect.top;
@@ -108,61 +121,53 @@ window.addEventListener("load", function () {
   }
 
   rafId = requestAnimationFrame(raf);
+}
 
-  function cleanup() {
-    if (rafId) {
-      cancelAnimationFrame(rafId);
-      rafId = null;
-    }
-    observers.forEach(function (obs) {
-      obs.disconnect();
-    });
-    lenis.destroy();
+function destroyScroll() {
+  if (rafId) {
+    cancelAnimationFrame(rafId);
+    rafId = null;
   }
 
-  window.addEventListener("beforeunload", cleanup);
-
-  document.addEventListener("click", function (e) {
-    if (isNavigating) {
-      return;
-    }
-
-    const link = e.target.closest("a[href]");
-    if (!link) {
-      return;
-    }
-
-    const href = link.getAttribute("href");
-    if (!href || href.startsWith("http") || href.startsWith("mailto")) {
-      return;
-    }
-
-    e.preventDefault();
-    isNavigating = true;
-
-    const storageKey = isProjectPage ? SCROLL_POSITION_KEY + "-project" : SCROLL_POSITION_KEY;
-    sessionStorage.setItem(storageKey, String(wrapper.scrollTop));
-
-    const instances = window._ditherInstances || [];
-
-    if (instances.length === 0) {
-      window.location.href = href;
-      return;
-    }
-
-    Promise.all(instances.map(function (dc) {
-      return dc.dissolveToBlack(DISSOLVE_DURATION);
-    }))
-      .then(function () {
-        return new Promise(function (r) {
-          setTimeout(r, POST_DISSOLVE_DELAY);
-        });
-      })
-      .then(function () {
-        window.location.href = href;
-      })
-      .catch(function () {
-        window.location.href = href;
-      });
+  observers.forEach(function (obs) {
+    obs.disconnect();
   });
+  observers = [];
+
+  if (lenis) {
+    lenis.destroy();
+    lenis = null;
+  }
+
+  const clone = document.getElementById("clone");
+  if (clone) {
+    clone.remove();
+  }
+
+  images = [];
+  items = [];
+  lastOffsets = new Map();
+}
+
+function saveScrollPosition() {
+  const wrapper = document.getElementById("wrapper");
+  if (!wrapper) {
+    return;
+  }
+
+  const isProjectPage = getIsProjectPage();
+  const storageKey = isProjectPage ? SCROLL_POSITION_KEY + "-project" : SCROLL_POSITION_KEY;
+  sessionStorage.setItem(storageKey, String(wrapper.scrollTop));
+}
+
+window.addEventListener("load", function () {
+  initScroll();
 });
+
+window.addEventListener("beforeunload", function () {
+  destroyScroll();
+});
+
+window.initScroll = initScroll;
+window.destroyScroll = destroyScroll;
+window.saveScrollPosition = saveScrollPosition;

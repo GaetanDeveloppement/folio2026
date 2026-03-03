@@ -523,6 +523,13 @@ class DitherCanvas {
       if (this.paletteTex) { gl.deleteTexture(this.paletteTex); }
       if (this.buf) { gl.deleteBuffer(this.buf); }
       if (this.prog) { gl.deleteProgram(this.prog); }
+
+      const loseContext = gl.getExtension("WEBGL_lose_context");
+      if (loseContext) {
+        loseContext.loseContext();
+      }
+
+      this.gl = null;
     }
 
     if (this.canvas && this.canvas.parentElement) {
@@ -556,6 +563,33 @@ function initDither(root) {
   });
 }
 
+function destroyAllDither() {
+  while (ditherInstances.length > 0) {
+    const instance = ditherInstances[0];
+    instance.destroy();
+  }
+}
+
+function dissolveAllToBlack(duration) {
+  if (ditherInstances.length === 0) {
+    return Promise.resolve();
+  }
+
+  return Promise.all(ditherInstances.map(function (dc) {
+    return dc.dissolveToBlack(duration);
+  }));
+}
+
+function dissolveAllFromBlack(duration) {
+  if (ditherInstances.length === 0) {
+    return Promise.resolve();
+  }
+
+  return Promise.all(ditherInstances.map(function (dc) {
+    return dc.dissolveFromBlack(duration);
+  }));
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   initDither();
 });
@@ -563,3 +597,8 @@ document.addEventListener("DOMContentLoaded", function () {
 window.addEventListener("ditherInitClone", function (e) {
   initDither(e.detail);
 });
+
+window.initDither = initDither;
+window.destroyAllDither = destroyAllDither;
+window.dissolveAllToBlack = dissolveAllToBlack;
+window.dissolveAllFromBlack = dissolveAllFromBlack;
