@@ -1,5 +1,7 @@
 const DISSOLVE_DURATION = 700;
 const OVERLAY_FADE_DURATION = 600;
+const REVEAL_STAGGER_DELAY = 80;
+const REVEAL_INITIAL_DELAY = 100;
 const FETCH_TIMEOUT = 8000;
 
 let isNavigating = false;
@@ -90,6 +92,38 @@ function fadeOverlay(target, duration) {
     });
 }
 
+function revealTextElements() {
+    const info = document.querySelector("main > .info > div");
+    if (!info) {
+        return;
+    }
+
+    const children = info.children;
+    for (let i = 0; i < children.length; i++) {
+        children[i].classList.add("reveal-line");
+    }
+
+    const socials = document.querySelector("main > .info > .socials");
+    if (socials) {
+        socials.classList.add("reveal-line");
+    }
+
+    requestAnimationFrame(function () {
+        for (let i = 0; i < children.length; i++) {
+            const child = children[i];
+            const delay = REVEAL_INITIAL_DELAY + (i * REVEAL_STAGGER_DELAY);
+            child.style.transitionDelay = delay + "ms";
+            child.classList.add("is-visible");
+        }
+
+        if (socials) {
+            const socialsDelay = REVEAL_INITIAL_DELAY + (children.length * REVEAL_STAGGER_DELAY);
+            socials.style.transitionDelay = socialsDelay + "ms";
+            socials.classList.add("is-visible");
+        }
+    });
+}
+
 function performTransition(href, pushToHistory) {
     if (isNavigating) {
         return;
@@ -125,6 +159,8 @@ function performTransition(href, pushToHistory) {
 
             window.initScroll();
             window.initDither();
+
+            revealTextElements();
 
             return fadeOverlay(0, OVERLAY_FADE_DURATION);
         })
@@ -170,3 +206,7 @@ function handlePopState() {
 
 document.addEventListener("click", handleClick);
 window.addEventListener("popstate", handlePopState);
+
+window.addEventListener("load", function () {
+    revealTextElements();
+});

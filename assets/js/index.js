@@ -76,7 +76,6 @@ function initScroll() {
   const savedPosition = sessionStorage.getItem(restoreKey);
   if (savedPosition) {
     const position = parseFloat(savedPosition);
-    wrapper.scrollTop = position;
     lenis.scrollTo(position, { immediate: true });
     sessionStorage.removeItem(restoreKey);
   }
@@ -150,14 +149,13 @@ function destroyScroll() {
 }
 
 function saveScrollPosition() {
-  const wrapper = document.getElementById("wrapper");
-  if (!wrapper) {
+  if (!lenis) {
     return;
   }
 
   const isProjectPage = getIsProjectPage();
   const storageKey = isProjectPage ? SCROLL_POSITION_KEY + "-project" : SCROLL_POSITION_KEY;
-  sessionStorage.setItem(storageKey, String(wrapper.scrollTop));
+  sessionStorage.setItem(storageKey, String(lenis.scroll));
 }
 
 window.addEventListener("load", function () {

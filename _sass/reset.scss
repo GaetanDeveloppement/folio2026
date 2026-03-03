@@ -56,7 +56,7 @@ pre {
 
 :root {
     --background: #f3f7fb;
-    --text-hc: #121d39;
+    --text-hc: #030302;
     --text-md: #77899f;
     --border: #d3e0ec;
 }
@@ -64,7 +64,7 @@ pre {
 @media (prefers-color-scheme: dark) {
     :root {
         --background: #030302;
-        --text-hc: #fcf2d7;
+        --text-hc: #f3f7fb;
         --text-md: #a49f93;
         --border: #302f2d;
     }
