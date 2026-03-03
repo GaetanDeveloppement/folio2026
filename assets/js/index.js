@@ -1,12 +1,17 @@
+const PARALLAX_SCALE_DEFAULT = 1;
+const UPDATE_THRESHOLD = 0.5;
+const DISSOLVE_DURATION = 1500;
+const POST_DISSOLVE_DELAY = 50;
+
 window.addEventListener("load", function () {
   const images = [];
   const observers = [];
   const scale =
-    parseFloat(document.body.style.getPropertyValue("--scale-image")) || 1;
+    parseFloat(document.body.style.getPropertyValue("--scale-image")) || PARALLAX_SCALE_DEFAULT;
   const scrollContainerHeight = document.body.clientHeight;
-  const imagesFunc = document.querySelectorAll("#scroller .parallax");
+  const imageElements = document.querySelectorAll("#scroller .parallax");
 
-  imagesFunc.forEach((item, index) => {
+  imageElements.forEach(function (item, index) {
     const parent = item.parentNode.parentNode;
     let imageHeight = item.offsetHeight * scale;
     let containerHeight = parent.offsetHeight;
@@ -15,7 +20,7 @@ window.addEventListener("load", function () {
     item.dataset.index = index;
     images.push({ containerHeight, gap });
 
-    const observer = new ResizeObserver((entries) => {
+    const observer = new ResizeObserver(function (entries) {
       const entry = entries[0];
       imageHeight = entry.target.offsetHeight * scale;
       containerHeight = parent.offsetHeight;
@@ -34,10 +39,10 @@ window.addEventListener("load", function () {
   scroller.after(clone);
   clone.id = "clone";
 
-  // Remove any canvases cloned from already-initialized dither wrappers
-  clone.querySelectorAll(".dither-wrap canvas").forEach((c) => c.remove());
+  clone.querySelectorAll(".dither-wrap canvas").forEach(function (c) {
+    c.remove();
+  });
 
-  // Initialize dither on the cloned images
   window.dispatchEvent(new CustomEvent("ditherInitClone", { detail: clone }));
 
   const lenis = new Lenis({
@@ -48,14 +53,14 @@ window.addEventListener("load", function () {
   });
 
   const items = document.querySelectorAll(".parallax");
-
   const lastOffsets = new Map();
-  const updateThreshold = 0.5;
+  let rafId = null;
+  let isNavigating = false;
 
   function raf(time) {
     lenis.raf(time);
 
-    items.forEach((item) => {
+    items.forEach(function (item) {
       const index = item.dataset["index"];
       const { containerHeight, gap } = images[index];
 
@@ -68,45 +73,75 @@ window.addEventListener("load", function () {
         bottom: y,
       };
 
-      // 0 / 1
       const factor = pos.top / (scrollContainerHeight + containerHeight);
-
-      // -1 / 1
       const power = (factor - 0.5) * 2;
-
       const res = (gap / 2) * power;
 
       const lastOffset = lastOffsets.get(item);
       if (
         lastOffset === undefined ||
-        Math.abs(res - lastOffset) > updateThreshold
+        Math.abs(res - lastOffset) > UPDATE_THRESHOLD
       ) {
         item.style.transform = `translateY(${-res}px)`;
         lastOffsets.set(item, res);
       }
     });
 
-    requestAnimationFrame(raf);
+    rafId = requestAnimationFrame(raf);
   }
 
-  requestAnimationFrame(raf);
+  rafId = requestAnimationFrame(raf);
 
-  window.addEventListener("beforeunload", () => {
-    observers.forEach((obs) => obs.disconnect());
-  });
+  function cleanup() {
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    observers.forEach(function (obs) {
+      obs.disconnect();
+    });
+    lenis.destroy();
+  }
 
-  document.addEventListener("click", (e) => {
+  window.addEventListener("beforeunload", cleanup);
+
+  document.addEventListener("click", function (e) {
+    if (isNavigating) {
+      return;
+    }
+
     const link = e.target.closest("a[href]");
-    if (!link) return;
+    if (!link) {
+      return;
+    }
+
     const href = link.getAttribute("href");
-    if (!href || href.startsWith("http") || href.startsWith("mailto")) return;
+    if (!href || href.startsWith("http") || href.startsWith("mailto")) {
+      return;
+    }
 
     e.preventDefault();
+    isNavigating = true;
+
     const instances = window._ditherInstances || [];
-    const DURATION = 1500;
-    Promise.all(instances.map((dc) => dc.dissolveToBlack(DURATION)))
-      .then(() => new Promise((r) => setTimeout(r, 50)))
-      .then(() => {
+
+    if (instances.length === 0) {
+      window.location.href = href;
+      return;
+    }
+
+    Promise.all(instances.map(function (dc) {
+      return dc.dissolveToBlack(DISSOLVE_DURATION);
+    }))
+      .then(function () {
+        return new Promise(function (r) {
+          setTimeout(r, POST_DISSOLVE_DELAY);
+        });
+      })
+      .then(function () {
+        window.location.href = href;
+      })
+      .catch(function () {
         window.location.href = href;
       });
   });

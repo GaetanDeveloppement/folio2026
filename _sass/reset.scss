@@ -2,7 +2,6 @@ html {
     box-sizing: border-box;
     font-size: 16px;
     height: 100%;
-    scroll-behavior: smooth;
 }
 
 *,
@@ -43,31 +42,13 @@ img {
     height: auto;
 }
 
-table {
-    width: 100%;
-}
-
-table,
-th,
-td {
-    border-collapse: collapse;
-    padding: 0.4rem;
-}
-
 a {
     text-decoration: none;
     color: inherit;
 }
 
-blockquote {
-    //reset
-    border: none;
-    padding: 0;
-    margin: 0;
-}
-
+blockquote,
 pre {
-    //reset
     border: none;
     padding: 0;
     margin: 0;
@@ -86,15 +67,5 @@ pre {
         --text-hc: #fcf2d7;
         --text-md: #a49f93;
         --border: #302f2d;
-    }
-}
-
-@media (prefers-color-scheme: light) {
-    body {
-        nav {
-            img {
-                filter: invert(1);
-            }
-        }
     }
 }

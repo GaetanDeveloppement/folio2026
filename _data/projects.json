@@ -6,10 +6,6 @@
     "page": "aesop",
     "images": [
       "aesop-1.webp",
-      "aesop-2.webp",
-      "aesop-1.webp",
-      "aesop-2.webp",
-      "aesop-1.webp",
       "aesop-2.webp"
     ]
   },
@@ -20,10 +16,6 @@
     "page": "pmc",
     "images": [
       "pmc-1.webp",
-      "pmc-2.webp",
-      "pmc-1.webp",
-      "pmc-2.webp",
-      "pmc-1.webp",
       "pmc-2.webp"
     ]
   },
@@ -33,11 +25,6 @@
     "alt": "Phronesis' interactive machine",
     "page": "phronesis",
     "images": [
-      "phronesis-1.webp",
-      "phronesis-1.webp",
-      "phronesis-1.webp",
-      "phronesis-1.webp",
-      "phronesis-1.webp",
       "phronesis-1.webp"
     ]
   },
@@ -47,11 +34,6 @@
     "alt": "Terapolis cover image",
     "page": "terapolis",
     "images": [
-      "terapolis-1.webp",
-      "terapolis-1.webp",
-      "terapolis-1.webp",
-      "terapolis-1.webp",
-      "terapolis-1.webp",
       "terapolis-1.webp"
     ]
   },
@@ -61,12 +43,6 @@
     "alt": "Close up of a motorcycle rear wheel at night",
     "page": "shark",
     "images": [
-      "shark.webp",
-      "shark.webp",
-      "shark.webp",
-      "shark.webp",
-      "shark.webp",
-      "shark.webp",
       "shark.webp"
     ]
   }
