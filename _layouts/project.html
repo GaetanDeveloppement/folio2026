@@ -23,7 +23,7 @@
                 <div id="scroller">
                     {% assign project_data = site.data.projects | where: "title", page.project_title | first %}
                     {% for image in project_data.images %}
-                        <div>
+                        <div class="project-item">
                             <div class="image-container">
                                 {% include responsive-image.html image_name=image alt=page.project_title classes="parallax" %}
                             </div>

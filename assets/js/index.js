@@ -2,14 +2,16 @@ const PARALLAX_SCALE_DEFAULT = 1;
 const UPDATE_THRESHOLD = 0.5;
 const DISSOLVE_DURATION = 1500;
 const POST_DISSOLVE_DELAY = 50;
+const SCROLL_POSITION_KEY = "carousel-scroll-position";
 
 window.addEventListener("load", function () {
   const images = [];
   const observers = [];
   const scale =
-    parseFloat(document.body.style.getPropertyValue("--scale-image")) || PARALLAX_SCALE_DEFAULT;
+    parseFloat(getComputedStyle(document.body).getPropertyValue("--scale-image")) || PARALLAX_SCALE_DEFAULT;
   const scrollContainerHeight = document.body.clientHeight;
   const imageElements = document.querySelectorAll("#scroller .parallax");
+  const isProjectPage = document.body.hasAttribute("data-layout");
 
   imageElements.forEach(function (item, index) {
     const parent = item.parentNode.parentNode;
@@ -43,7 +45,13 @@ window.addEventListener("load", function () {
     c.remove();
   });
 
-  window.dispatchEvent(new CustomEvent("ditherInitClone", { detail: clone }));
+  clone.querySelectorAll("[data-dither-initialized]").forEach(function (el) {
+    el.removeAttribute("data-dither-initialized");
+  });
+
+  if (!isProjectPage) {
+    window.dispatchEvent(new CustomEvent("ditherInitClone", { detail: clone }));
+  }
 
   const lenis = new Lenis({
     infinite: true,
@@ -51,6 +59,15 @@ window.addEventListener("load", function () {
     wrapper,
     eventsTarget: window,
   });
+
+  const restoreKey = isProjectPage ? SCROLL_POSITION_KEY + "-project" : SCROLL_POSITION_KEY;
+  const savedPosition = sessionStorage.getItem(restoreKey);
+  if (savedPosition) {
+    const position = parseFloat(savedPosition);
+    wrapper.scrollTop = position;
+    lenis.scrollTo(position, { immediate: true });
+    sessionStorage.removeItem(restoreKey);
+  }
 
   const items = document.querySelectorAll(".parallax");
   const lastOffsets = new Map();
@@ -122,6 +139,9 @@ window.addEventListener("load", function () {
 
     e.preventDefault();
     isNavigating = true;
+
+    const storageKey = isProjectPage ? SCROLL_POSITION_KEY + "-project" : SCROLL_POSITION_KEY;
+    sessionStorage.setItem(storageKey, String(wrapper.scrollTop));
 
     const instances = window._ditherInstances || [];
 
