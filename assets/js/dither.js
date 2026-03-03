@@ -6,6 +6,7 @@ const COLOR_QUANTIZE_SHIFT = 4;
 const MIN_COLOR_DISTANCE_SQ = 2500;
 const MAX_PALETTE_SAMPLE_SIZE = 200;
 const HOVER_DURATION = 300;
+const DISSOLVE_REVEAL_DURATION = 800;
 const DITHER_INIT_ATTR = "data-dither-initialized";
 
 const VERT = `
@@ -233,7 +234,7 @@ class DitherCanvas {
         self._resize();
       });
       self.ro.observe(imgEl.parentElement);
-      self.dissolveFromBlack(HOVER_DURATION * 5);
+      self.dissolveFromBlack(DISSOLVE_REVEAL_DURATION);
     }
 
     function onError() {

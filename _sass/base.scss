@@ -165,3 +165,11 @@ main {
         }
     }
 }
+
+#transition-overlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 1000;
+  pointer-events: none;
+}

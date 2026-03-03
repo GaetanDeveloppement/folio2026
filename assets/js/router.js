@@ -1,5 +1,5 @@
-const DISSOLVE_DURATION = 1500;
-const POST_DISSOLVE_DELAY = 50;
+const DISSOLVE_DURATION = 700;
+const OVERLAY_FADE_DURATION = 600;
 const FETCH_TIMEOUT = 8000;
 
 let isNavigating = false;
@@ -62,7 +62,35 @@ function fetchPage(url) {
         });
 }
 
-function navigateTo(href) {
+function fadeOverlay(target, duration) {
+    const overlay = document.getElementById("transition-overlay");
+    if (!overlay) {
+        return Promise.resolve();
+    }
+
+    return new Promise(function (resolve) {
+        const start = performance.now();
+        const from = parseFloat(overlay.style.opacity) || 0;
+        const delta = target - from;
+
+        function tick(now) {
+            const p = Math.min((now - start) / duration, 1.0);
+            const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+            overlay.style.opacity = from + delta * e;
+
+            if (p < 1.0) {
+                requestAnimationFrame(tick);
+            } else {
+                overlay.style.opacity = target;
+                resolve();
+            }
+        }
+
+        requestAnimationFrame(tick);
+    });
+}
+
+function performTransition(href, pushToHistory) {
     if (isNavigating) {
         return;
     }
@@ -73,12 +101,10 @@ function navigateTo(href) {
 
     let fetchPromise = fetchPage(href);
 
-    window.dissolveAllToBlack(DISSOLVE_DURATION)
-        .then(function () {
-            return new Promise(function (resolve) {
-                setTimeout(resolve, POST_DISSOLVE_DELAY);
-            });
-        })
+    Promise.all([
+        window.dissolveAllToBlack(DISSOLVE_DURATION),
+        fadeOverlay(1, OVERLAY_FADE_DURATION),
+    ])
         .then(function () {
             return fetchPromise;
         })
@@ -92,11 +118,17 @@ function navigateTo(href) {
             window.destroyAllDither();
 
             swapContent(parsed);
-            history.pushState({ href }, parsed.title, href);
+
+            if (pushToHistory) {
+                history.pushState({ href }, parsed.title, href);
+            }
 
             window.initScroll();
             window.initDither();
 
+            return fadeOverlay(0, OVERLAY_FADE_DURATION);
+        })
+        .then(function () {
             isNavigating = false;
         })
         .catch(function () {
@@ -124,51 +156,16 @@ function handleClick(e) {
     }
 
     e.preventDefault();
-    navigateTo(href);
+    performTransition(href, true);
 }
 
-function handlePopState(e) {
+function handlePopState() {
     if (isNavigating) {
         return;
     }
 
     const href = window.location.pathname + window.location.search;
-
-    isNavigating = true;
-
-    window.saveScrollPosition();
-
-    let fetchPromise = fetchPage(href);
-
-    window.dissolveAllToBlack(DISSOLVE_DURATION)
-        .then(function () {
-            return new Promise(function (resolve) {
-                setTimeout(resolve, POST_DISSOLVE_DELAY);
-            });
-        })
-        .then(function () {
-            return fetchPromise;
-        })
-        .then(function (html) {
-            const parsed = parseRemotePage(html);
-            if (!parsed.mainHTML) {
-                throw new Error("No <main> found in remote page");
-            }
-
-            window.destroyScroll();
-            window.destroyAllDither();
-
-            swapContent(parsed);
-            document.title = parsed.title;
-
-            window.initScroll();
-            window.initDither();
-
-            isNavigating = false;
-        })
-        .catch(function () {
-            window.location.reload();
-        });
+    performTransition(href, false);
 }
 
 document.addEventListener("click", handleClick);
