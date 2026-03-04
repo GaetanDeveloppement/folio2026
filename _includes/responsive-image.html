@@ -1,0 +1,26 @@
+{% assign name = include.image_name | split: '.' | first %}
+<picture>
+    <source
+        sizes="{{ include.sizes | default: '(max-width: 768px) calc(100vw - 24px), calc(50vw - 32px)' }}"
+        srcset="{{ '/assets/image/generated/' | append: name | append: '-326.webp' | relative_url }} 326w,
+                {{ '/assets/image/generated/' | append: name | append: '-476.webp' | relative_url }} 476w,
+                {{ '/assets/image/generated/' | append: name | append: '-726.webp' | relative_url }} 726w,
+                {{ '/assets/image/generated/' | append: name | append: '-780.webp' | relative_url }} 780w,
+                {{ '/assets/image/generated/' | append: name | append: '-985.webp' | relative_url }} 985w,
+                {{ '/assets/image/generated/' | append: name | append: '-1210.webp' | relative_url }} 1210w,
+                {{ '/assets/image/generated/' | append: name | append: '-1710.webp' | relative_url }} 1710w"
+        type="image/webp"
+    >
+    <source
+        sizes="{{ include.sizes | default: '(max-width: 768px) calc(100vw - 24px), calc(50vw - 32px)' }}"
+        srcset="{{ '/assets/image/generated/' | append: name | append: '-326.png' | relative_url }} 326w,
+                {{ '/assets/image/generated/' | append: name | append: '-476.png' | relative_url }} 476w,
+                {{ '/assets/image/generated/' | append: name | append: '-726.png' | relative_url }} 726w,
+                {{ '/assets/image/generated/' | append: name | append: '-780.png' | relative_url }} 780w,
+                {{ '/assets/image/generated/' | append: name | append: '-985.png' | relative_url }} 985w,
+                {{ '/assets/image/generated/' | append: name | append: '-1210.png' | relative_url }} 1210w,
+                {{ '/assets/image/generated/' | append: name | append: '-1710.png' | relative_url }} 1710w"
+        type="image/png"
+    >
+    <img class="{{ include.classes }}" src="{{ '/assets/image/' | append: include.image_name | relative_url }}" alt="{{ include.alt }}" />
+</picture>

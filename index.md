@@ -1,6 +1,7 @@
 ---
-layout: default
+layout: app
 title: "gaëtan jestin - portfolio"
+page_layout: home
 ---
 
 # gaëtan jestin

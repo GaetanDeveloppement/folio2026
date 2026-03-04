@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="{{ site.lang }}">
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8">
+    <meta name="description" content="{{ page.description | default: site.description }}">
+    <title>{{ page.title }} - {{ site.title }}</title>
+    <link rel="stylesheet" href="{{ '/assets/css/main.css' | relative_url }}">
+    <link rel="stylesheet" href="https://unpkg.com/lenis@1.3.15/dist/lenis.css">
+    <link rel="icon" type="image/png" href="{{ '/assets/image/favicon.png' | relative_url }}">
+</head>
+
+<body data-layout="{{ page.page_layout | default: 'home' }}">
+    <div id="transition-overlay" style="opacity: 0;"></div>
+    <main>
+        {% if page.page_layout == "project" %}
+        <div class="info">
+            <div>
+                {{ content }}
+                <a href="{{ '/' | relative_url }}" data-transition="true">back</a>
+            </div>
+        </div>
+
+        <div class="projects">
+            <div id="wrapper" class="project-list">
+                <div id="scroller">
+                    {% assign project_data = site.data.projects | where: "title", page.project_title | first %}
+                    {% for image in project_data.images %}
+                    <div class="project-item">
+                        <div class="image-container">
+                            {% include responsive-image.html image_name=image alt=page.project_title classes="parallax"
+                            %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="info">
+            <div>
+                {{ content }}
+            </div>
+            <div class="socials">
+                <a href="{{ site.social.blog }}" target="_blank">
+                    blog
+                </a>
+                <a href="{{ site.social.linkedin }}" target="_blank">
+                    linkedin
+                </a>
+            </div>
+        </div>
+
+        <div class="projects">
+            <div id="wrapper" class="project-list">
+                <div id="scroller">
+                    {% for project in site.data.projects %}
+                    <div class="project-item">
+                        <a href="{{ '/' | append: project.page | append: '.html' | relative_url }}">
+                            <div class="image-container dither-wrap">
+                                {% include responsive-image.html image_name=project.image alt=project.alt
+                                classes="parallax" %}
+                            </div>
+                            <p>{{ project.title }}</p>
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </main>
+
+    <script src="https://unpkg.com/lenis@1.3.15/dist/lenis.min.js"></script>
+    <script src="{{ '/assets/js/dither.js' | relative_url }}"></script>
+    <script src="{{ '/assets/js/index.js' | relative_url }}"></script>
+    <script src="{{ '/assets/js/router.js' | relative_url }}"></script>
+</body>
+
+</html>

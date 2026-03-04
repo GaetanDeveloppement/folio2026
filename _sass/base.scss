@@ -1,29 +1,28 @@
-$backgroundColor: #fff;
-$bodyColor: #000;
-$altColor: #c4c4c4;
-$bodyFont:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif,
+$body-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 
-body {
-    height: 100vh;
-    background: #fff;
-    color: #000;
-    font-family: $bodyFont;
+$spacing-xs: 8px;
+$spacing-sm: 12px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+$spacing-2xl: 64px;
 
-    @media (prefers-color-scheme: dark) {
-        background: #000;
-        color: #fff;
-    }
+$breakpoint-mobile: 768px;
+$parallax-scale: 1.25;
+
+body {
+    --scale-image: #{$parallax-scale};
+    height: 100vh;
+    background: var(--background);
+    color: var(--text-hc);
+    font-family: $body-font;
+    overflow: hidden;
 
     h1,
     p,
     a {
-        font-size: 16px;
-
-        /* @media screen and (max-width: 768px) {
-            font-size: 16px;
-        } */
+        font-size: $spacing-md;
     }
 
     a {
@@ -32,29 +31,43 @@ body {
 
     em {
         font-style: normal;
-        color: $altColor;
+        color: var(--text-md);
     }
 
     .info {
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        margin-top: 24px;
-        margin-bottom: 24px;
+        margin-top: $spacing-lg;
+        margin-bottom: $spacing-lg;
 
         div {
             p:nth-of-type(2) {
-                margin-top: 12px;
+                margin-top: $spacing-sm;
             }
         }
     }
 
-    .socials {
-        display: flex;
-        gap: 8px;
+    .reveal-line {
+        clip-path: inset(0 0 100% 0);
+        transform: translateY($spacing-lg);
+        opacity: 0;
+        transition:
+            clip-path 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+            transform 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+            opacity 0.6s ease;
     }
 
-    overflow: hidden;
+    .reveal-line.is-visible {
+        clip-path: inset(0 0 0 0);
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    .socials {
+        display: flex;
+        gap: $spacing-xs;
+    }
 }
 
 main {
@@ -62,20 +75,21 @@ main {
     display: grid;
     grid-template-columns: auto auto;
     justify-content: space-between;
-    grid-gap: 32px;
-    padding: 0px 0px 0px 32px;
+    grid-gap: $spacing-xl;
+    padding: 0 0 0 $spacing-xl;
     overflow: hidden;
 
-    @media screen and (max-width: 768px) {
+    @media screen and (max-width: $breakpoint-mobile) {
         grid-template-columns: auto;
-        gap: 64px;
-        padding: 12px;
+        gap: $spacing-2xl;
+        padding: $spacing-sm;
     }
 
-    > .info {
-        > div {
-            width: calc((50vw - (32px + 16px)) / 2);
-            @media screen and (max-width: 768px) {
+    >.info {
+        >div {
+            width: calc((50vw - ($spacing-xl + $spacing-md)) / 2);
+
+            @media screen and (max-width: $breakpoint-mobile) {
                 width: 100%;
             }
         }
@@ -83,83 +97,94 @@ main {
 
     .projects {
         overflow: hidden;
-        /* border-radius: 8px; */
         view-transition-name: images;
     }
 
     .project-list {
-        -ms-overflow-style: none; /* Internet Explorer 10+ */
-        scrollbar-width: none; /* Firefox, Safari 18.2+, Chromium 121+ */
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+
         ::-webkit-scrollbar {
-            display: none; /* Older Safari and Chromium */
+            display: none;
         }
 
         overflow: scroll;
-        height: 100vh;
+        height: 100svh;
 
         #clone {
-            height: 100vh;
+            height: 100svh;
             overflow: hidden;
         }
+    }
 
-        > div > div {
-            margin-bottom: 8px;
-            position: relative;
+    .project-item {
+        margin-bottom: $spacing-xs;
+        position: relative;
 
-            > a {
-                display: flex;
-            }
-            p {
-                position: absolute;
-                bottom: 16px;
-                left: 16px;
-                padding: 0px 8px;
-                color: white;
-                background-color: black;
-            }
+        >a {
+            display: flex;
         }
 
-        .image-container {
-            overflow: hidden;
-            aspect-ratio: 4/3;
-            width: 50vw;
-            position: relative;
+        p {
+            position: absolute;
+            bottom: $spacing-md;
+            left: $spacing-md;
+            padding: 0 $spacing-xs;
+            color: var(--background);
+            background-color: var(--text-hc);
+        }
+    }
 
-            @media screen and (max-width: 768px) {
-                width: 100%;
-            }
-            picture {
-                display: block;
-                width: 100%;
-                height: 100%;
-            }
-            img {
-                object-fit: cover;
-                object-position: center;
-                width: 100%;
-                height: auto;
-                transform-origin: center;
-                scale: var(--scale-image, 1);
-            }
+    .image-container {
+        overflow: hidden;
+        aspect-ratio: 4/3;
+        width: 50vw;
+        position: relative;
+
+        @media screen and (max-width: $breakpoint-mobile) {
+            width: 100%;
         }
 
-        .dither-wrap {
-            position: relative;
+        picture {
             display: block;
+            width: 100%;
+            height: 100%;
         }
 
-        .dither-wrap img {
+        img {
+            object-fit: cover;
+            object-position: center;
+            width: 100%;
+            height: auto;
+            transform-origin: center;
+            scale: var(--scale-image, 1);
+        }
+    }
+
+    .dither-wrap {
+        position: relative;
+        display: block;
+
+        img {
             width: 100%;
             height: auto;
             display: block;
             visibility: hidden;
         }
 
-        .dither-wrap canvas {
+        canvas {
             position: absolute;
             inset: 0;
             width: 100%;
             height: 100%;
         }
     }
+}
+
+#transition-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--background);
+    z-index: 1000;
+    pointer-events: none;
 }

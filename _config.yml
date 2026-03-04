@@ -1,6 +1,14 @@
-url: "https://gaetan.cool" # the base hostname & protocol for your site, e.g. http://example.com
-baseurl: "" # the subpath of your site, e.g. /blog
-title: "Folio 2025 - Gaëtan Jestin" # the name of your site, e.g. ACME Corp.
+url: "https://gaetan.cool"
+baseurl: ""
+title: "Folio 2026 - Gaëtan Jestin"
+lang: fr
+description: "Gaëtan Jestin - designer interactif & directeur artistique"
+
+social:
+  blog: "https://blog.gaetan.cool"
+  linkedin: "https://www.linkedin.com/in/gaetan-jestin/"
 
 exclude:
   - image-resizer/
+  - CLAUDE.md
+  - .idea/
