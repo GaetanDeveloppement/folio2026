@@ -5,7 +5,7 @@ const ALPHA_THRESHOLD = 128;
 const COLOR_QUANTIZE_SHIFT = 4;
 const MIN_COLOR_DISTANCE_SQ = 2500;
 const MAX_PALETTE_SAMPLE_SIZE = 200;
-const HOVER_DURATION = 300;
+const HOVER_DURATION = 700;
 const DISSOLVE_REVEAL_DURATION = 800;
 const DITHER_INIT_ATTR = "data-dither-initialized";
 
@@ -25,9 +25,8 @@ const FRAG = `
     uniform sampler2D u_bayer;
     uniform sampler2D u_palette;
     uniform vec2      u_resolution;
-    uniform float     u_colorize;
     uniform float     u_dissolve;
-    uniform vec2      u_mouse;
+    uniform float     u_hover;
 
     varying vec2 v_uv;
 
@@ -73,13 +72,7 @@ const FRAG = `
         vec2  dissolveUV = mod(dissolvePx, ${BAYER_SIZE}.0) / ${BAYER_SIZE}.0;
         float dissolveT  = texture2D(u_bayer, dissolveUV).r;
 
-        float dist = (u_mouse.x >= 0.0)
-            ? length((v_uv - u_mouse) * vec2(u_resolution.x / u_resolution.y, 1.0))
-            : 1.0;
-        float radial  = clamp(1.0 - dist, 0.0, 1.0);
-        float effectiveColorize = clamp(u_colorize + radial, 0.0, 1.0);
-
-        vec3 result = (dissolveT < effectiveColorize) ? color : bw;
+        vec3 result = (dissolveT < u_hover) ? color : bw;
 
         if (u_dissolve > 0.0) {
             float spread = 0.4 * (1.0 - u_dissolve);
@@ -87,7 +80,10 @@ const FRAG = `
             result = mix(result, vec3(0.0), mask);
         }
 
-        gl_FragColor = vec4(result, 1.0);
+        float hoverSpread = 0.4 * (1.0 - u_hover);
+        float hoverMask = step(1.0 - lum, u_hover + (t - 0.5) * hoverSpread);
+        float a = 1.0 - hoverMask;
+        gl_FragColor = vec4(result * a, a);
     }
 `;
 
@@ -201,6 +197,7 @@ class DitherCanvas {
   constructor(imgEl) {
     this.img = imgEl;
     this.canvas = document.createElement("canvas");
+    this.canvas.className = "parallax";
     this.gl = this.canvas.getContext("webgl");
 
     if (!this.gl) {
@@ -210,20 +207,17 @@ class DitherCanvas {
     imgEl.parentElement.appendChild(this.canvas);
     this._setup();
 
-    this.colorize = 0.0;
     this.dissolve = 1.0;
-    this.mouse = [-1, -1];
+    this.hover = 0.0;
     this._rafId = null;
     this.textureReady = false;
     this.ro = null;
 
     this._boundHandleEnter = this._handleEnter.bind(this);
     this._boundHandleLeave = this._handleLeave.bind(this);
-    this._boundHandleMove = this._handleMove.bind(this);
 
     imgEl.parentElement.addEventListener("mouseenter", this._boundHandleEnter);
     imgEl.parentElement.addEventListener("mouseleave", this._boundHandleLeave);
-    imgEl.parentElement.addEventListener("mousemove", this._boundHandleMove);
 
     const self = this;
 
@@ -250,21 +244,11 @@ class DitherCanvas {
   }
 
   _handleEnter() {
-    this._animateTo(1.0);
+    this._animateOpacity(1);
   }
 
   _handleLeave() {
-    this.mouse = [-1, -1];
-    this._animateTo(0.0);
-  }
-
-  _handleMove(e) {
-    const rect = this.canvas.getBoundingClientRect();
-    this.mouse = [
-      (e.clientX - rect.left) / rect.width,
-      (e.clientY - rect.top) / rect.height,
-    ];
-    this.render();
+    this._animateOpacity(0);
   }
 
   _setup() {
@@ -289,6 +273,8 @@ class DitherCanvas {
       throw new Error(gl.getProgramInfoLog(prog));
     }
 
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.useProgram(prog);
     this.prog = prog;
 
@@ -309,9 +295,8 @@ class DitherCanvas {
       bayer: gl.getUniformLocation(prog, "u_bayer"),
       palette: gl.getUniformLocation(prog, "u_palette"),
       resolution: gl.getUniformLocation(prog, "u_resolution"),
-      colorize: gl.getUniformLocation(prog, "u_colorize"),
       dissolve: gl.getUniformLocation(prog, "u_dissolve"),
-      mouse: gl.getUniformLocation(prog, "u_mouse"),
+      hover: gl.getUniformLocation(prog, "u_hover"),
     };
 
     this.bayerTex = this._makeTex(
@@ -371,9 +356,11 @@ class DitherCanvas {
     );
 
     const palette = extractPalette(this.img);
-    const palData = new Uint8Array(palette.flatMap(function (c) {
-      return [c.r, c.g, c.b];
-    }));
+    const palData = new Uint8Array(
+      palette.flatMap(function (c) {
+        return [c.r, c.g, c.b];
+      }),
+    );
 
     gl.bindTexture(gl.TEXTURE_2D, this.paletteTex);
     gl.texImage2D(
@@ -409,17 +396,17 @@ class DitherCanvas {
     this.render();
   }
 
-  _animateTo(target) {
+  _animateOpacity(target) {
     cancelAnimationFrame(this._rafId);
     const start = performance.now();
-    const from = this.colorize;
+    const from = this.hover;
     const delta = target - from;
     const self = this;
 
     function tick(now) {
       const p = Math.min((now - start) / HOVER_DURATION, 1.0);
-      const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-      self.colorize = from + delta * e;
+      const e = p;
+      self.hover = from + delta * e;
       self.render();
 
       if (p < 1.0) {
@@ -496,9 +483,8 @@ class DitherCanvas {
     gl.bindTexture(gl.TEXTURE_2D, this.paletteTex);
     gl.uniform1i(this.u.palette, 2);
 
-    gl.uniform1f(this.u.colorize, this.colorize);
     gl.uniform1f(this.u.dissolve, this.dissolve);
-    gl.uniform2f(this.u.mouse, this.mouse[0], this.mouse[1]);
+    gl.uniform1f(this.u.hover, this.hover);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
@@ -514,16 +500,25 @@ class DitherCanvas {
     if (parent) {
       parent.removeEventListener("mouseenter", this._boundHandleEnter);
       parent.removeEventListener("mouseleave", this._boundHandleLeave);
-      parent.removeEventListener("mousemove", this._boundHandleMove);
     }
 
     if (this.gl) {
       const gl = this.gl;
-      if (this.imgTex) { gl.deleteTexture(this.imgTex); }
-      if (this.bayerTex) { gl.deleteTexture(this.bayerTex); }
-      if (this.paletteTex) { gl.deleteTexture(this.paletteTex); }
-      if (this.buf) { gl.deleteBuffer(this.buf); }
-      if (this.prog) { gl.deleteProgram(this.prog); }
+      if (this.imgTex) {
+        gl.deleteTexture(this.imgTex);
+      }
+      if (this.bayerTex) {
+        gl.deleteTexture(this.bayerTex);
+      }
+      if (this.paletteTex) {
+        gl.deleteTexture(this.paletteTex);
+      }
+      if (this.buf) {
+        gl.deleteBuffer(this.buf);
+      }
+      if (this.prog) {
+        gl.deleteProgram(this.prog);
+      }
 
       const loseContext = gl.getExtension("WEBGL_lose_context");
       if (loseContext) {
@@ -576,9 +571,11 @@ function dissolveAllToBlack(duration) {
     return Promise.resolve();
   }
 
-  return Promise.all(ditherInstances.map(function (dc) {
-    return dc.dissolveToBlack(duration);
-  }));
+  return Promise.all(
+    ditherInstances.map(function (dc) {
+      return dc.dissolveToBlack(duration);
+    }),
+  );
 }
 
 function dissolveAllFromBlack(duration) {
@@ -586,9 +583,11 @@ function dissolveAllFromBlack(duration) {
     return Promise.resolve();
   }
 
-  return Promise.all(ditherInstances.map(function (dc) {
-    return dc.dissolveFromBlack(duration);
-  }));
+  return Promise.all(
+    ditherInstances.map(function (dc) {
+      return dc.dissolveFromBlack(duration);
+    }),
+  );
 }
 
 document.addEventListener("DOMContentLoaded", function () {
