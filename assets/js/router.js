@@ -195,10 +195,7 @@ function handleClick(e) {
 
     const item = link.closest(".project-item");
     if (item) {
-        const rect = item.getBoundingClientRect();
-        console.log("[router] clicked item rect.top:", rect.top);
-        console.log("[router] clicked item rect.height:", rect.height);
-        sessionStorage.setItem("transition-item-top", String(rect.top));
+        sessionStorage.setItem("transition-item-top", String(item.getBoundingClientRect().top));
     }
 
     performTransition(href, true);
