@@ -96,6 +96,27 @@ function revealTextElements() {
     });
 }
 
+function unrevealTextElements() {
+    const info = document.querySelector("main > .info > div");
+    if (!info) {
+        return;
+    }
+
+    const children = info.children;
+    const socials = document.querySelector("main > .info > .socials");
+
+    if (socials) {
+        socials.style.transitionDelay = "0ms";
+        socials.classList.remove("is-visible");
+    }
+
+    for (let i = children.length - 1; i >= 0; i--) {
+        const delay = (children.length - 1 - i) * REVEAL_STAGGER_DELAY;
+        children[i].style.transitionDelay = delay + "ms";
+        children[i].classList.remove("is-visible");
+    }
+}
+
 function performTransition(href, pushToHistory) {
     if (isNavigating) {
         return;
@@ -106,6 +127,8 @@ function performTransition(href, pushToHistory) {
     window.saveScrollPosition();
 
     let fetchPromise = fetchPage(href);
+
+    unrevealTextElements();
 
     Promise.all([
         window.dissolveAllToBlack(DISSOLVE_DURATION),
