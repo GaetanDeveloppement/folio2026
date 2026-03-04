@@ -23,7 +23,7 @@ function initScroll() {
   const scale =
     parseFloat(getComputedStyle(document.body).getPropertyValue("--scale-image")) || PARALLAX_SCALE_DEFAULT;
   scrollContainerHeight = document.body.clientHeight;
-  const imageElements = document.querySelectorAll("#scroller .parallax");
+  const imageElements = document.querySelectorAll("#scroller .parallax:not(canvas)");
   const isProjectPage = getIsProjectPage();
 
   imageElements.forEach(function (item, index) {
@@ -92,7 +92,7 @@ function initScroll() {
     sessionStorage.removeItem(restoreKey);
   }
 
-  items = Array.from(document.querySelectorAll(".parallax"));
+  items = Array.from(document.querySelectorAll(".parallax:not(canvas)"));
 
   function raf(time) {
     lenis.raf(time);
@@ -123,7 +123,12 @@ function initScroll() {
         lastOffset === undefined ||
         Math.abs(res - lastOffset) > UPDATE_THRESHOLD
       ) {
-        item.style.transform = `translateY(${-res}px)`;
+        const transform = `translateY(${-res}px)`;
+        item.style.transform = transform;
+        const canvas = item.parentNode.parentNode.querySelector("canvas");
+        if (canvas) {
+          canvas.style.transform = transform;
+        }
         lastOffsets.set(item, res);
       }
     });

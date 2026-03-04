@@ -10,7 +10,7 @@ $spacing-xl: 32px;
 $spacing-2xl: 64px;
 
 $breakpoint-mobile: 768px;
-$parallax-scale: 1;
+$parallax-scale: 1.25;
 
 :root {
     --background: #f3f7fb;
@@ -194,6 +194,7 @@ main {
             inset: 0;
             width: 100%;
             height: 100%;
+            scale: var(--scale-image, 1);
         }
     }
 }
