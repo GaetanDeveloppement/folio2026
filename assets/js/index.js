@@ -1,6 +1,7 @@
 const PARALLAX_SCALE_DEFAULT = 1;
 const UPDATE_THRESHOLD = 0.5;
 const SCROLL_POSITION_KEY = "carousel-scroll-position";
+const TRANSITION_ITEM_TOP_KEY = "transition-item-top";
 
 let images = [];
 let observers = [];
@@ -74,7 +75,27 @@ function initScroll() {
 
   const restoreKey = isProjectPage ? SCROLL_POSITION_KEY + "-project" : SCROLL_POSITION_KEY;
   const savedPosition = sessionStorage.getItem(restoreKey);
-  if (savedPosition) {
+  const transitionItemTop = sessionStorage.getItem(TRANSITION_ITEM_TOP_KEY);
+  sessionStorage.removeItem(TRANSITION_ITEM_TOP_KEY);
+
+  if (transitionItemTop !== null) {
+    sessionStorage.removeItem(restoreKey);
+    const targetY = parseFloat(transitionItemTop);
+    const cloneFirstItem = document.querySelector("#clone .project-item");
+    console.log("[initScroll] targetY (from home click):", targetY);
+    console.log("[initScroll] scroller.offsetHeight:", scroller.offsetHeight);
+    console.log("[initScroll] wrapper.scrollHeight:", wrapper.scrollHeight);
+    console.log("[initScroll] wrapper.clientHeight:", wrapper.clientHeight);
+    if (cloneFirstItem) {
+      console.log("[initScroll] clone first item rect.top (before scroll):", cloneFirstItem.getBoundingClientRect().top);
+      const scrollOffset = cloneFirstItem.getBoundingClientRect().top - targetY;
+      console.log("[initScroll] computed scrollOffset:", scrollOffset);
+      lenis.scrollTo(scrollOffset, { immediate: true });
+      console.log("[initScroll] lenis.scroll after scrollTo:", lenis.scroll);
+      console.log("[initScroll] wrapper.scrollTop after scrollTo:", wrapper.scrollTop);
+      console.log("[initScroll] clone first item rect.top AFTER scroll:", cloneFirstItem.getBoundingClientRect().top);
+    }
+  } else if (savedPosition) {
     const position = parseFloat(savedPosition);
     lenis.scrollTo(position, { immediate: true });
     sessionStorage.removeItem(restoreKey);
