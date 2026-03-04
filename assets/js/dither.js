@@ -27,6 +27,7 @@ const FRAG = `
     uniform vec2      u_resolution;
     uniform float     u_colorize;
     uniform float     u_dissolve;
+    uniform float     u_alpha;
     uniform vec2      u_mouse;
 
     varying vec2 v_uv;
@@ -87,7 +88,7 @@ const FRAG = `
             result = mix(result, vec3(0.0), mask);
         }
 
-        gl_FragColor = vec4(result, 1.0);
+        gl_FragColor = vec4(result * u_alpha, u_alpha);
     }
 `;
 
@@ -212,6 +213,7 @@ class DitherCanvas {
 
     this.colorize = 0.0;
     this.dissolve = 1.0;
+    this.alpha = 1.0;
     this.mouse = [-1, -1];
     this._rafId = null;
     this.textureReady = false;
@@ -250,12 +252,12 @@ class DitherCanvas {
   }
 
   _handleEnter() {
-    this._animateTo(1.0);
+    this._animateOpacity(0);
   }
 
   _handleLeave() {
     this.mouse = [-1, -1];
-    this._animateTo(0.0);
+    this._animateOpacity(1);
   }
 
   _handleMove(e) {
@@ -289,6 +291,8 @@ class DitherCanvas {
       throw new Error(gl.getProgramInfoLog(prog));
     }
 
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.useProgram(prog);
     this.prog = prog;
 
@@ -311,6 +315,7 @@ class DitherCanvas {
       resolution: gl.getUniformLocation(prog, "u_resolution"),
       colorize: gl.getUniformLocation(prog, "u_colorize"),
       dissolve: gl.getUniformLocation(prog, "u_dissolve"),
+      alpha: gl.getUniformLocation(prog, "u_alpha"),
       mouse: gl.getUniformLocation(prog, "u_mouse"),
     };
 
@@ -409,17 +414,17 @@ class DitherCanvas {
     this.render();
   }
 
-  _animateTo(target) {
+  _animateOpacity(target) {
     cancelAnimationFrame(this._rafId);
     const start = performance.now();
-    const from = this.colorize;
+    const from = this.alpha;
     const delta = target - from;
     const self = this;
 
     function tick(now) {
       const p = Math.min((now - start) / HOVER_DURATION, 1.0);
       const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-      self.colorize = from + delta * e;
+      self.alpha = from + delta * e;
       self.render();
 
       if (p < 1.0) {
@@ -498,6 +503,7 @@ class DitherCanvas {
 
     gl.uniform1f(this.u.colorize, this.colorize);
     gl.uniform1f(this.u.dissolve, this.dissolve);
+    gl.uniform1f(this.u.alpha, this.alpha);
     gl.uniform2f(this.u.mouse, this.mouse[0], this.mouse[1]);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);

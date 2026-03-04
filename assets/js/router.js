@@ -1,5 +1,4 @@
 const DISSOLVE_DURATION = 700;
-const OVERLAY_FADE_DURATION = 600;
 const REVEAL_STAGGER_DELAY = 80;
 const REVEAL_INITIAL_DELAY = 100;
 const FETCH_TIMEOUT = 8000;
@@ -64,33 +63,6 @@ function fetchPage(url) {
         });
 }
 
-function fadeOverlay(target, duration) {
-    const overlay = document.getElementById("transition-overlay");
-    if (!overlay) {
-        return Promise.resolve();
-    }
-
-    return new Promise(function (resolve) {
-        const start = performance.now();
-        const from = parseFloat(overlay.style.opacity) || 0;
-        const delta = target - from;
-
-        function tick(now) {
-            const p = Math.min((now - start) / duration, 1.0);
-            const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-            overlay.style.opacity = from + delta * e;
-
-            if (p < 1.0) {
-                requestAnimationFrame(tick);
-            } else {
-                overlay.style.opacity = target;
-                resolve();
-            }
-        }
-
-        requestAnimationFrame(tick);
-    });
-}
 
 function revealTextElements() {
     const info = document.querySelector("main > .info > div");
@@ -137,7 +109,6 @@ function performTransition(href, pushToHistory) {
 
     Promise.all([
         window.dissolveAllToBlack(DISSOLVE_DURATION),
-        fadeOverlay(1, OVERLAY_FADE_DURATION),
     ])
         .then(function () {
             return fetchPromise;
@@ -161,8 +132,6 @@ function performTransition(href, pushToHistory) {
             window.initDither();
 
             revealTextElements();
-
-            return fadeOverlay(0, OVERLAY_FADE_DURATION);
         })
         .then(function () {
             isNavigating = false;
