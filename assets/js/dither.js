@@ -25,7 +25,6 @@ const FRAG = `
     uniform sampler2D u_bayer;
     uniform sampler2D u_palette;
     uniform vec2      u_resolution;
-    uniform float     u_colorize;
     uniform float     u_dissolve;
     uniform float     u_hover;
 
@@ -73,7 +72,7 @@ const FRAG = `
         vec2  dissolveUV = mod(dissolvePx, ${BAYER_SIZE}.0) / ${BAYER_SIZE}.0;
         float dissolveT  = texture2D(u_bayer, dissolveUV).r;
 
-        vec3 result = (dissolveT < u_colorize) ? color : bw;
+        vec3 result = (dissolveT < u_hover) ? color : bw;
 
         if (u_dissolve > 0.0) {
             float spread = 0.4 * (1.0 - u_dissolve);
@@ -208,7 +207,6 @@ class DitherCanvas {
     imgEl.parentElement.appendChild(this.canvas);
     this._setup();
 
-    this.colorize = 0.0;
     this.dissolve = 1.0;
     this.hover = 0.0;
     this._rafId = null;
@@ -297,7 +295,6 @@ class DitherCanvas {
       bayer: gl.getUniformLocation(prog, "u_bayer"),
       palette: gl.getUniformLocation(prog, "u_palette"),
       resolution: gl.getUniformLocation(prog, "u_resolution"),
-      colorize: gl.getUniformLocation(prog, "u_colorize"),
       dissolve: gl.getUniformLocation(prog, "u_dissolve"),
       hover: gl.getUniformLocation(prog, "u_hover"),
     };
@@ -486,7 +483,6 @@ class DitherCanvas {
     gl.bindTexture(gl.TEXTURE_2D, this.paletteTex);
     gl.uniform1i(this.u.palette, 2);
 
-    gl.uniform1f(this.u.colorize, this.colorize);
     gl.uniform1f(this.u.dissolve, this.dissolve);
     gl.uniform1f(this.u.hover, this.hover);
 
