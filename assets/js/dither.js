@@ -5,9 +5,20 @@ const ALPHA_THRESHOLD = 128;
 const COLOR_QUANTIZE_SHIFT = 4;
 const MIN_COLOR_DISTANCE_SQ = 2500;
 const MAX_PALETTE_SAMPLE_SIZE = 200;
-const HOVER_DURATION = 700;
+const HOVER_DURATION = 1500;
 const DISSOLVE_REVEAL_DURATION = 800;
 const DITHER_INIT_ATTR = "data-dither-initialized";
+
+let _mouseX = -1;
+let _mouseY = -1;
+document.addEventListener(
+  "mousemove",
+  function (e) {
+    _mouseX = e.clientX;
+    _mouseY = e.clientY;
+  },
+  { passive: true },
+);
 
 const VERT = `
     attribute vec2 a_pos;
@@ -72,7 +83,8 @@ const FRAG = `
         vec2  dissolveUV = mod(dissolvePx, ${BAYER_SIZE}.0) / ${BAYER_SIZE}.0;
         float dissolveT  = texture2D(u_bayer, dissolveUV).r;
 
-        vec3 result = (dissolveT < u_hover) ? color : bw;
+        float colorHover = min(1.0, u_hover * 1.5);
+        vec3 result = (dissolveT < colorHover) ? color : bw;
 
         if (u_dissolve > 0.0) {
             float spread = 0.4 * (1.0 - u_dissolve);
@@ -81,7 +93,7 @@ const FRAG = `
         }
 
         float hoverSpread = 0.4 * (1.0 - u_hover);
-        float hoverMask = step(1.0 - lum, u_hover + (t - 0.5) * hoverSpread);
+        float hoverMask = step(1.0 - lum, u_hover + (t - 0.5) * hoverSpread) * step(0.001, u_hover);
         float a = 1.0 - hoverMask;
         gl_FragColor = vec4(result * a, a);
     }
@@ -210,16 +222,33 @@ class DitherCanvas {
     this.dissolve = 1.0;
     this.hover = 0.0;
     this._rafId = null;
+    this._pollRafId = null;
+    this._hoverActive = false;
     this.textureReady = false;
     this.ro = null;
 
-    this._boundHandleEnter = this._handleEnter.bind(this);
-    this._boundHandleLeave = this._handleLeave.bind(this);
-
-    imgEl.parentElement.addEventListener("mouseenter", this._boundHandleEnter);
-    imgEl.parentElement.addEventListener("mouseleave", this._boundHandleLeave);
-
     const self = this;
+
+    function pollHover() {
+      if (!self.gl) {
+        return;
+      }
+      let isHovered = false;
+      if (_mouseX >= 0) {
+        const el = document.elementFromPoint(_mouseX, _mouseY);
+        isHovered = el !== null && self.img.parentElement.contains(el);
+      }
+      if (isHovered !== self._hoverActive) {
+        self._hoverActive = isHovered;
+        if (isHovered) {
+          self._handleEnter();
+        } else {
+          self._handleLeave();
+        }
+      }
+      self._pollRafId = requestAnimationFrame(pollHover);
+    }
+    this._pollRafId = requestAnimationFrame(pollHover);
 
     function onReady() {
       self._uploadTexture();
@@ -243,7 +272,20 @@ class DitherCanvas {
     }
   }
 
+  _getTwin() {
+    const mySrc = this.img.src;
+    const self = this;
+    return ditherInstances.find(function (dc) {
+      return dc !== self && dc.img.src === mySrc;
+    });
+  }
+
   _handleEnter() {
+    const twin = this._getTwin();
+    if (twin) {
+      this.hover = twin.hover;
+      this.render();
+    }
     this._animateOpacity(1);
   }
 
@@ -491,15 +533,10 @@ class DitherCanvas {
 
   destroy() {
     cancelAnimationFrame(this._rafId);
+    cancelAnimationFrame(this._pollRafId);
 
     if (this.ro) {
       this.ro.disconnect();
-    }
-
-    const parent = this.img.parentElement;
-    if (parent) {
-      parent.removeEventListener("mouseenter", this._boundHandleEnter);
-      parent.removeEventListener("mouseleave", this._boundHandleLeave);
     }
 
     if (this.gl) {
