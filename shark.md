@@ -6,6 +6,6 @@ page_layout: project
 ---
 
 # Shark Helmets
-*Design & making*
+*VFX*
 
 This is new text now...
