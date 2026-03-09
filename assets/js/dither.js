@@ -6,8 +6,13 @@ const COLOR_QUANTIZE_SHIFT = 4;
 const MIN_COLOR_DISTANCE_SQ = 2500;
 const MAX_PALETTE_SAMPLE_SIZE = 200;
 const HOVER_DURATION = 1500;
-const DISSOLVE_REVEAL_DURATION = 800;
+const DISSOLVE_REVEAL_DURATION = 2000;
 const DITHER_INIT_ATTR = "data-dither-initialized";
+const COLOR_WAVE_LEAD = 1.5;
+const HOVER_SPREAD_SCALE = 1.6;
+const EASE_SPLIT = 0.2;
+const HOVER_EASING_POWER = 3;
+const DISSOLVE_EASING_POWER = 3;
 
 let _mouseX = -1;
 let _mouseY = -1;
@@ -83,7 +88,7 @@ const FRAG = `
         vec2  dissolveUV = mod(dissolvePx, ${BAYER_SIZE}.0) / ${BAYER_SIZE}.0;
         float dissolveT  = texture2D(u_bayer, dissolveUV).r;
 
-        float colorHover = min(1.0, u_hover * 1.5);
+        float colorHover = min(1.0, u_hover * ${COLOR_WAVE_LEAD});
         vec3 result = (dissolveT < colorHover) ? color : bw;
 
         if (u_dissolve > 0.0) {
@@ -92,12 +97,19 @@ const FRAG = `
             result = mix(result, vec3(0.0), mask);
         }
 
-        float hoverSpread = 0.4 * (1.0 - u_hover);
-        float hoverMask = step(1.0 - lum, u_hover + (t - 0.5) * hoverSpread) * step(0.001, u_hover);
+        float hoverSpread = ${HOVER_SPREAD_SCALE} * u_hover * (1.0 - u_hover);
+        float hoverMask = step(1.0 - lum, u_hover + (t - 0.5) * hoverSpread);
         float a = 1.0 - hoverMask;
         gl_FragColor = vec4(result * a, a);
     }
 `;
+
+function easeAsymmetric(p, split, power) {
+  if (p < split) {
+    return 0.5 * Math.pow(p / split, power);
+  }
+  return 1 - 0.5 * Math.pow((1 - p) / (1 - split), power);
+}
 
 function makeBayerMatrix(n) {
   if (n === 2) {
@@ -447,8 +459,7 @@ class DitherCanvas {
 
     function tick(now) {
       const p = Math.min((now - start) / HOVER_DURATION, 1.0);
-      const e = p;
-      self.hover = from + delta * e;
+      self.hover = from + delta * easeAsymmetric(p, EASE_SPLIT, HOVER_EASING_POWER);
       self.render();
 
       if (p < 1.0) {
@@ -467,7 +478,7 @@ class DitherCanvas {
 
       function tick(now) {
         const p = Math.min((now - start) / duration, 1.0);
-        self.dissolve = p;
+        self.dissolve = easeAsymmetric(p, EASE_SPLIT, DISSOLVE_EASING_POWER);
         self.render();
 
         if (p < 1.0) {
@@ -491,7 +502,7 @@ class DitherCanvas {
 
       function tick(now) {
         const p = Math.min((now - start) / duration, 1.0);
-        self.dissolve = 1.0 - p;
+        self.dissolve = 1.0 - easeAsymmetric(p, EASE_SPLIT, DISSOLVE_EASING_POWER);
         self.render();
 
         if (p < 1.0) {
