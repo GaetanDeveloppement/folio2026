@@ -91,10 +91,18 @@ function initScroll() {
     if (cloneFirstItem) {
       const scrollOffset = cloneFirstItem.getBoundingClientRect().top - targetY;
       lenis.scrollTo(scrollOffset, { immediate: true });
-      const transitionImg = cloneFirstItem.querySelector("img.parallax");
-      if (transitionImg) {
-        transitionImg.setAttribute("data-skip-reveal", "true");
-      }
+      [
+        document.querySelector("#scroller .project-item"),
+        cloneFirstItem,
+      ].forEach(function (item) {
+        if (!item) {
+          return;
+        }
+        const img = item.querySelector("img.parallax");
+        if (img) {
+          img.setAttribute("data-skip-reveal", "true");
+        }
+      });
     }
   } else if (savedPosition) {
     const position = parseFloat(savedPosition);
