@@ -14,6 +14,15 @@ const EASE_SPLIT = 0.2;
 const HOVER_EASING_POWER = 3;
 const DISSOLVE_EASING_POWER = 3;
 
+function isWebGLAvailable() {
+  try {
+    const canvas = document.createElement("canvas");
+    return !!(canvas.getContext("webgl") || canvas.getContext("experimental-webgl"));
+  } catch (e) {
+    return false;
+  }
+}
+
 let _mouseX = -1;
 let _mouseY = -1;
 document.addEventListener(
@@ -269,6 +278,7 @@ class DitherCanvas {
         self._resize();
       });
       self.ro.observe(imgEl.parentElement);
+      imgEl.style.visibility = "visible";
       self.dissolveFromBlack(DISSOLVE_REVEAL_DURATION);
     }
 
@@ -595,6 +605,13 @@ window._ditherInstances = ditherInstances;
 function initDither(root) {
   if (!root) {
     root = document;
+  }
+
+  if (!isWebGLAvailable()) {
+    root.querySelectorAll(".dither-wrap img").forEach(function (img) {
+      img.style.visibility = "visible";
+    });
+    return;
   }
 
   root.querySelectorAll(".dither-wrap img.parallax").forEach(function (img) {

@@ -21,9 +21,13 @@ function initScroll() {
   lastOffsets = new Map();
 
   const scale =
-    parseFloat(getComputedStyle(document.body).getPropertyValue("--scale-image")) || PARALLAX_SCALE_DEFAULT;
+    parseFloat(
+      getComputedStyle(document.body).getPropertyValue("--scale-image"),
+    ) || PARALLAX_SCALE_DEFAULT;
   scrollContainerHeight = document.body.clientHeight;
-  const imageElements = document.querySelectorAll("#scroller .parallax:not(canvas)");
+  const imageElements = document.querySelectorAll(
+    "#scroller .parallax:not(canvas)",
+  );
   const isProjectPage = getIsProjectPage();
 
   imageElements.forEach(function (item, index) {
@@ -73,7 +77,9 @@ function initScroll() {
     eventsTarget: window,
   });
 
-  const restoreKey = isProjectPage ? SCROLL_POSITION_KEY + "-project" : SCROLL_POSITION_KEY;
+  const restoreKey = isProjectPage
+    ? SCROLL_POSITION_KEY + "-project"
+    : SCROLL_POSITION_KEY;
   const savedPosition = sessionStorage.getItem(restoreKey);
   const transitionItemTop = sessionStorage.getItem(TRANSITION_ITEM_TOP_KEY);
   sessionStorage.removeItem(TRANSITION_ITEM_TOP_KEY);
@@ -171,7 +177,9 @@ function saveScrollPosition() {
   }
 
   const isProjectPage = getIsProjectPage();
-  const storageKey = isProjectPage ? SCROLL_POSITION_KEY + "-project" : SCROLL_POSITION_KEY;
+  const storageKey = isProjectPage
+    ? SCROLL_POSITION_KEY + "-project"
+    : SCROLL_POSITION_KEY;
   sessionStorage.setItem(storageKey, String(lenis.scroll));
 }
 

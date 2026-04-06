@@ -119,6 +119,10 @@ main {
     .projects {
         overflow: hidden;
         view-transition-name: images;
+
+        @media screen and (max-width: $breakpoint-mobile) {
+            height: 65svh;
+        }
     }
 
     .project-list {
@@ -190,7 +194,7 @@ main {
             width: 100%;
             height: auto;
             display: block;
-            /* visibility: hidden; */
+            visibility: hidden;
         }
 
         canvas {
