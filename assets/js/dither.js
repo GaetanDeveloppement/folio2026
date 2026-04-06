@@ -16,7 +16,9 @@ const EASING_POWER = 3;
 function isWebGLAvailable() {
   try {
     const canvas = document.createElement("canvas");
-    return !!(canvas.getContext("webgl") || canvas.getContext("experimental-webgl"));
+    return !!(
+      canvas.getContext("webgl") || canvas.getContext("experimental-webgl")
+    );
   } catch (e) {
     return false;
   }
@@ -229,7 +231,7 @@ function extractPalette(img) {
 }
 
 class DitherCanvas {
-  constructor(imgEl) {
+  constructor(imgEl, skipReveal = false) {
     this.img = imgEl;
     this.canvas = document.createElement("canvas");
     this.canvas.className = "parallax";
@@ -241,6 +243,9 @@ class DitherCanvas {
 
     imgEl.parentElement.appendChild(this.canvas);
     this._setup();
+    if (skipReveal) {
+      imgEl.style.visibility = "visible";
+    }
 
     this.dissolve = 1.0;
     this.hover = 0.0;
@@ -252,9 +257,8 @@ class DitherCanvas {
     this.revealOnly = document.body.dataset.layout === "project";
 
     const self = this;
-    const isRevealOnly = this.revealOnly;
 
-    if (!isRevealOnly) {
+    if (!this.revealOnly) {
       function pollHover() {
         if (!self.gl) {
           return;
@@ -279,15 +283,16 @@ class DitherCanvas {
 
     function onReady() {
       self._uploadTexture();
+      if (skipReveal) {
+        self.dissolve = 0.0;
+      }
       self._resize();
       self.ro = new ResizeObserver(function () {
         self._resize();
       });
       self.ro.observe(imgEl.parentElement);
-      imgEl.style.visibility = "visible";
-      if (isRevealOnly) {
-        self.dissolveFromBlack(DISSOLVE_REVEAL_DURATION);
-      } else {
+      if (!skipReveal) {
+        imgEl.style.visibility = "visible";
         self.dissolveFromBlack(DISSOLVE_REVEAL_DURATION);
       }
     }
@@ -604,13 +609,12 @@ function initDither(root) {
 
     img.setAttribute(DITHER_INIT_ATTR, "true");
 
-    if (img.hasAttribute("data-skip-reveal")) {
+    const skipReveal = img.hasAttribute("data-skip-reveal");
+    if (skipReveal) {
       img.removeAttribute("data-skip-reveal");
-      img.style.visibility = "visible";
-      return;
     }
 
-    ditherInstances.push(new DitherCanvas(img));
+    ditherInstances.push(new DitherCanvas(img, skipReveal));
   });
 }
 
