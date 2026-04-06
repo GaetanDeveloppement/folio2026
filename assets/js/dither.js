@@ -286,9 +286,7 @@ class DitherCanvas {
       self.ro.observe(imgEl.parentElement);
       imgEl.style.visibility = "visible";
       if (isRevealOnly) {
-        self.dissolveFromBlack(DISSOLVE_REVEAL_DURATION).then(function () {
-          self.destroy();
-        });
+        self.dissolveFromBlack(DISSOLVE_REVEAL_DURATION);
       } else {
         self.dissolveFromBlack(DISSOLVE_REVEAL_DURATION);
       }
