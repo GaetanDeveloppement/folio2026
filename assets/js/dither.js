@@ -605,6 +605,13 @@ function initDither(root) {
     }
 
     img.setAttribute(DITHER_INIT_ATTR, "true");
+
+    if (img.hasAttribute("data-skip-reveal")) {
+      img.removeAttribute("data-skip-reveal");
+      img.style.visibility = "visible";
+      return;
+    }
+
     ditherInstances.push(new DitherCanvas(img));
   });
 }

@@ -91,6 +91,10 @@ function initScroll() {
     if (cloneFirstItem) {
       const scrollOffset = cloneFirstItem.getBoundingClientRect().top - targetY;
       lenis.scrollTo(scrollOffset, { immediate: true });
+      const transitionImg = cloneFirstItem.querySelector("img.parallax");
+      if (transitionImg) {
+        transitionImg.setAttribute("data-skip-reveal", "true");
+      }
     }
   } else if (savedPosition) {
     const position = parseFloat(savedPosition);
