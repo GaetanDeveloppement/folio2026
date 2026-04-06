@@ -49,7 +49,7 @@
                         "title", page.project_title | first %} {% for image in
                         project_data.images %}
                         <div class="project-item">
-                            <div class="image-container">
+                            <div class="image-container dither-wrap">
                                 {% include responsive-image.html
                                 image_name=image alt=page.project_title
                                 classes="parallax" %}

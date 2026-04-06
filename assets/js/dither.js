@@ -11,13 +11,14 @@ const DITHER_INIT_ATTR = "data-dither-initialized";
 const COLOR_WAVE_LEAD = 1.5;
 const HOVER_SPREAD_SCALE = 1.6;
 const EASE_SPLIT = 0.2;
-const HOVER_EASING_POWER = 3;
-const DISSOLVE_EASING_POWER = 3;
+const EASING_POWER = 3;
 
 function isWebGLAvailable() {
   try {
     const canvas = document.createElement("canvas");
-    return !!(canvas.getContext("webgl") || canvas.getContext("experimental-webgl"));
+    return !!(
+      canvas.getContext("webgl") || canvas.getContext("experimental-webgl")
+    );
   } catch (e) {
     return false;
   }
@@ -52,6 +53,7 @@ const FRAG = `
     uniform vec2      u_resolution;
     uniform float     u_dissolve;
     uniform float     u_hover;
+    uniform float     u_reveal;
 
     varying vec2 v_uv;
 
@@ -109,7 +111,9 @@ const FRAG = `
         float hoverSpread = ${HOVER_SPREAD_SCALE} * u_hover * (1.0 - u_hover);
         float hoverMask = step(1.0 - lum, u_hover + (t - 0.5) * hoverSpread);
         float a = 1.0 - hoverMask;
-        gl_FragColor = vec4(result * a, a);
+
+        float revealAlpha = step(lum, u_dissolve * (1.0 + (t - 0.5) * 0.4));
+        gl_FragColor = mix(vec4(result * a, a), vec4(0.0, 0.0, 0.0, revealAlpha), u_reveal);
     }
 `;
 
@@ -227,7 +231,7 @@ function extractPalette(img) {
 }
 
 class DitherCanvas {
-  constructor(imgEl) {
+  constructor(imgEl, skipReveal = false) {
     this.img = imgEl;
     this.canvas = document.createElement("canvas");
     this.canvas.className = "parallax";
@@ -239,6 +243,9 @@ class DitherCanvas {
 
     imgEl.parentElement.appendChild(this.canvas);
     this._setup();
+    if (skipReveal) {
+      imgEl.style.visibility = "visible";
+    }
 
     this.dissolve = 1.0;
     this.hover = 0.0;
@@ -247,39 +254,47 @@ class DitherCanvas {
     this._hoverActive = false;
     this.textureReady = false;
     this.ro = null;
+    this.revealOnly = document.body.dataset.layout === "project";
 
     const self = this;
 
-    function pollHover() {
-      if (!self.gl) {
-        return;
-      }
-      let isHovered = false;
-      if (_mouseX >= 0) {
-        const el = document.elementFromPoint(_mouseX, _mouseY);
-        isHovered = el !== null && self.img.parentElement.contains(el);
-      }
-      if (isHovered !== self._hoverActive) {
-        self._hoverActive = isHovered;
-        if (isHovered) {
-          self._handleEnter();
-        } else {
-          self._handleLeave();
+    if (!this.revealOnly) {
+      function pollHover() {
+        if (!self.gl) {
+          return;
         }
+        let isHovered = false;
+        if (_mouseX >= 0) {
+          const el = document.elementFromPoint(_mouseX, _mouseY);
+          isHovered = el !== null && self.img.parentElement.contains(el);
+        }
+        if (isHovered !== self._hoverActive) {
+          self._hoverActive = isHovered;
+          if (isHovered) {
+            self._handleEnter();
+          } else {
+            self._handleLeave();
+          }
+        }
+        self._pollRafId = requestAnimationFrame(pollHover);
       }
-      self._pollRafId = requestAnimationFrame(pollHover);
+      this._pollRafId = requestAnimationFrame(pollHover);
     }
-    this._pollRafId = requestAnimationFrame(pollHover);
 
     function onReady() {
       self._uploadTexture();
+      if (skipReveal) {
+        self.dissolve = 0.0;
+      }
       self._resize();
       self.ro = new ResizeObserver(function () {
         self._resize();
       });
       self.ro.observe(imgEl.parentElement);
-      imgEl.style.visibility = "visible";
-      self.dissolveFromBlack(DISSOLVE_REVEAL_DURATION);
+      if (!skipReveal) {
+        imgEl.style.visibility = "visible";
+        self.dissolveFromBlack(DISSOLVE_REVEAL_DURATION);
+      }
     }
 
     function onError() {
@@ -361,6 +376,7 @@ class DitherCanvas {
       resolution: gl.getUniformLocation(prog, "u_resolution"),
       dissolve: gl.getUniformLocation(prog, "u_dissolve"),
       hover: gl.getUniformLocation(prog, "u_hover"),
+      reveal: gl.getUniformLocation(prog, "u_reveal"),
     };
 
     this.bayerTex = this._makeTex(
@@ -460,70 +476,41 @@ class DitherCanvas {
     this.render();
   }
 
-  _animateOpacity(target) {
+  _tween(prop, target, duration) {
     cancelAnimationFrame(this._rafId);
     const start = performance.now();
-    const from = this.hover;
+    const from = this[prop];
     const delta = target - from;
     const self = this;
 
-    function tick(now) {
-      const p = Math.min((now - start) / HOVER_DURATION, 1.0);
-      self.hover = from + delta * easeAsymmetric(p, EASE_SPLIT, HOVER_EASING_POWER);
-      self.render();
-
-      if (p < 1.0) {
-        self._rafId = requestAnimationFrame(tick);
-      }
-    }
-
-    this._rafId = requestAnimationFrame(tick);
-  }
-
-  dissolveToBlack(duration) {
-    const self = this;
-
     return new Promise(function (resolve) {
-      const start = performance.now();
-
       function tick(now) {
         const p = Math.min((now - start) / duration, 1.0);
-        self.dissolve = easeAsymmetric(p, EASE_SPLIT, DISSOLVE_EASING_POWER);
+        self[prop] = from + delta * easeAsymmetric(p, EASE_SPLIT, EASING_POWER);
         self.render();
-
         if (p < 1.0) {
-          requestAnimationFrame(tick);
+          self._rafId = requestAnimationFrame(tick);
         } else {
           resolve();
         }
       }
-
-      requestAnimationFrame(tick);
+      self._rafId = requestAnimationFrame(tick);
     });
+  }
+
+  _animateOpacity(target) {
+    this._tween("hover", target, HOVER_DURATION);
+  }
+
+  dissolveToBlack(duration) {
+    this.dissolve = 0;
+    return this._tween("dissolve", 1, duration);
   }
 
   dissolveFromBlack(duration) {
     this.dissolve = 1.0;
     this.render();
-    const self = this;
-
-    return new Promise(function (resolve) {
-      const start = performance.now();
-
-      function tick(now) {
-        const p = Math.min((now - start) / duration, 1.0);
-        self.dissolve = 1.0 - easeAsymmetric(p, EASE_SPLIT, DISSOLVE_EASING_POWER);
-        self.render();
-
-        if (p < 1.0) {
-          requestAnimationFrame(tick);
-        } else {
-          resolve();
-        }
-      }
-
-      requestAnimationFrame(tick);
-    });
+    return this._tween("dissolve", 0, duration);
   }
 
   render() {
@@ -548,6 +535,7 @@ class DitherCanvas {
 
     gl.uniform1f(this.u.dissolve, this.dissolve);
     gl.uniform1f(this.u.hover, this.hover);
+    gl.uniform1f(this.u.reveal, this.revealOnly ? 1.0 : 0.0);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
@@ -620,7 +608,13 @@ function initDither(root) {
     }
 
     img.setAttribute(DITHER_INIT_ATTR, "true");
-    ditherInstances.push(new DitherCanvas(img));
+
+    const skipReveal = img.hasAttribute("data-skip-reveal");
+    if (skipReveal) {
+      img.removeAttribute("data-skip-reveal");
+    }
+
+    ditherInstances.push(new DitherCanvas(img, skipReveal));
   });
 }
 

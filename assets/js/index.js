@@ -91,6 +91,18 @@ function initScroll() {
     if (cloneFirstItem) {
       const scrollOffset = cloneFirstItem.getBoundingClientRect().top - targetY;
       lenis.scrollTo(scrollOffset, { immediate: true });
+      [
+        document.querySelector("#scroller .project-item"),
+        cloneFirstItem,
+      ].forEach(function (item) {
+        if (!item) {
+          return;
+        }
+        const img = item.querySelector("img.parallax");
+        if (img) {
+          img.setAttribute("data-skip-reveal", "true");
+        }
+      });
     }
   } else if (savedPosition) {
     const position = parseFloat(savedPosition);
