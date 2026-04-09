@@ -264,6 +264,7 @@ class DitherCanvas {
     this.dissolve = 1.0;
     this.hover = 0.0;
     this._rafId = null;
+    this._dissolveRafId = null;
     this._pollRafId = null;
     this._hoverActive = false;
     this.textureReady = false;
@@ -491,8 +492,9 @@ class DitherCanvas {
     this.render();
   }
 
-  _tween(prop, target, duration) {
-    cancelAnimationFrame(this._rafId);
+  _tween(prop, target, duration, rafKey) {
+    const key = rafKey || "_rafId";
+    cancelAnimationFrame(this[key]);
     const start = performance.now();
     const from = this[prop];
     const delta = target - from;
@@ -504,12 +506,12 @@ class DitherCanvas {
         self[prop] = from + delta * easeAsymmetric(p, EASE_SPLIT, EASING_POWER);
         self.render();
         if (p < 1.0) {
-          self._rafId = requestAnimationFrame(tick);
+          self[key] = requestAnimationFrame(tick);
         } else {
           resolve();
         }
       }
-      self._rafId = requestAnimationFrame(tick);
+      self[key] = requestAnimationFrame(tick);
     });
   }
 
@@ -521,15 +523,16 @@ class DitherCanvas {
     if (this.canvas) {
       this.canvas.style.display = "";
     }
+    cancelAnimationFrame(this._rafId);
     this.dissolve = 0;
-    return this._tween("dissolve", 1, duration);
+    return this._tween("dissolve", 1, duration, "_dissolveRafId");
   }
 
   dissolveFromBlack(duration) {
     this.dissolve = 1.0;
     this.render();
     const self = this;
-    return this._tween("dissolve", 0, duration).then(function () {
+    return this._tween("dissolve", 0, duration, "_dissolveRafId").then(function () {
       if (self.revealOnly && self.canvas) {
         self.canvas.style.display = "none";
       }
@@ -566,6 +569,7 @@ class DitherCanvas {
 
   destroy() {
     cancelAnimationFrame(this._rafId);
+    cancelAnimationFrame(this._dissolveRafId);
     cancelAnimationFrame(this._pollRafId);
 
     if (this.ro) {
