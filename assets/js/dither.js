@@ -26,6 +26,13 @@ function isWebGLAvailable() {
 
 let _mouseX = -1;
 let _mouseY = -1;
+let _lightMode = window.matchMedia("(prefers-color-scheme: light)").matches;
+window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function (e) {
+  _lightMode = e.matches;
+  ditherInstances.forEach(function (dc) {
+    dc.render();
+  });
+});
 document.addEventListener(
   "mousemove",
   function (e) {
@@ -54,6 +61,7 @@ const FRAG = `
     uniform float     u_dissolve;
     uniform float     u_hover;
     uniform float     u_reveal;
+    uniform float     u_light;
 
     varying vec2 v_uv;
 
@@ -103,17 +111,20 @@ const FRAG = `
         vec3 result = (dissolveT < colorHover) ? color : bw;
 
         if (u_dissolve > 0.0) {
-            float spread = 0.4 * (1.0 - u_dissolve);
-            float mask = step(lum, u_dissolve + (t - 0.5) * spread);
-            result = mix(result, vec3(0.0), mask);
+            float spread     = 0.4 * (1.0 - u_dissolve);
+            float dissolveLum = mix(lum, 1.0 - lum, u_light);
+            float mask       = step(dissolveLum, u_dissolve + (t - 0.5) * spread);
+            result = mix(result, mix(vec3(0.0), vec3(1.0), u_light), mask);
         }
 
         float hoverSpread = ${HOVER_SPREAD_SCALE} * u_hover * (1.0 - u_hover);
         float hoverMask = step(max(1.0 - lum, 0.001), u_hover + (t - 0.5) * hoverSpread);
         float a = 1.0 - hoverMask;
 
-        float revealAlpha = step(lum, u_dissolve * (1.0 + t * 0.4));
-        gl_FragColor = mix(vec4(result * a, a), vec4(0.0, 0.0, 0.0, revealAlpha), u_reveal);
+        float revealLum   = mix(lum, 1.0 - lum, u_light);
+        float revealAlpha = step(revealLum, u_dissolve * (1.0 + t * 0.4));
+        vec4  revealColor = mix(vec4(0.0, 0.0, 0.0, revealAlpha), vec4(revealAlpha), u_light);
+        gl_FragColor = mix(vec4(result * a, a), revealColor, u_reveal);
     }
 `;
 
@@ -377,6 +388,7 @@ class DitherCanvas {
       dissolve: gl.getUniformLocation(prog, "u_dissolve"),
       hover: gl.getUniformLocation(prog, "u_hover"),
       reveal: gl.getUniformLocation(prog, "u_reveal"),
+      light: gl.getUniformLocation(prog, "u_light"),
     };
 
     this.bayerTex = this._makeTex(
@@ -544,6 +556,7 @@ class DitherCanvas {
     gl.uniform1f(this.u.dissolve, this.dissolve);
     gl.uniform1f(this.u.hover, this.hover);
     gl.uniform1f(this.u.reveal, this.revealOnly ? 1.0 : 0.0);
+    gl.uniform1f(this.u.light, _lightMode ? 1.0 : 0.0);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
