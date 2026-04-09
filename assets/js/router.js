@@ -124,8 +124,6 @@ function performTransition(href, pushToHistory) {
 
     isNavigating = true;
 
-    window.saveScrollPosition();
-
     let fetchPromise = fetchPage(href);
 
     unrevealTextElements();
@@ -142,6 +140,7 @@ function performTransition(href, pushToHistory) {
                 throw new Error("No <main> found in remote page");
             }
 
+            window.saveScrollPosition();
             window.destroyScroll();
             window.destroyAllDither();
 
