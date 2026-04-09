@@ -112,7 +112,7 @@ const FRAG = `
         float hoverMask = step(max(1.0 - lum, 0.001), u_hover + (t - 0.5) * hoverSpread);
         float a = 1.0 - hoverMask;
 
-        float revealAlpha = step(lum, u_dissolve * (1.0 + (t - 0.5) * 0.4));
+        float revealAlpha = step(lum, u_dissolve * (1.0 + t * 0.4));
         gl_FragColor = mix(vec4(result * a, a), vec4(0.0, 0.0, 0.0, revealAlpha), u_reveal);
     }
 `;
