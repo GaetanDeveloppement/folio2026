@@ -110,11 +110,15 @@ const FRAG = `
         float colorHover = min(1.0, u_hover * ${COLOR_WAVE_LEAD});
         vec3 result = (dissolveT < colorHover) ? color : bw;
 
+        vec3 bgDark  = vec3(0.012, 0.012, 0.008);
+        vec3 bgLight = vec3(0.953, 0.969, 0.984);
+        vec3 bgColor = mix(bgDark, bgLight, u_light);
+
         if (u_dissolve > 0.0) {
-            float spread     = 0.4 * (1.0 - u_dissolve);
+            float spread      = 0.4 * (1.0 - u_dissolve);
             float dissolveLum = mix(lum, 1.0 - lum, u_light);
-            float mask       = step(dissolveLum, u_dissolve + (t - 0.5) * spread);
-            result = mix(result, mix(vec3(0.0), vec3(1.0), u_light), mask);
+            float mask        = step(dissolveLum, u_dissolve + (t - 0.5) * spread);
+            result = mix(result, bgColor, mask);
         }
 
         float hoverSpread = ${HOVER_SPREAD_SCALE} * u_hover * (1.0 - u_hover);
@@ -123,8 +127,7 @@ const FRAG = `
 
         float revealLum   = mix(lum, 1.0 - lum, u_light);
         float revealAlpha = step(revealLum, u_dissolve * (1.0 + t * 0.4));
-        vec4  revealColor = mix(vec4(0.0, 0.0, 0.0, revealAlpha), vec4(revealAlpha), u_light);
-        gl_FragColor = mix(vec4(result * a, a), revealColor, u_reveal);
+        gl_FragColor = mix(vec4(result * a, a), vec4(bgColor * revealAlpha, revealAlpha), u_reveal);
     }
 `;
 
