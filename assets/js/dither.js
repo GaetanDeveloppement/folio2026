@@ -109,7 +109,7 @@ const FRAG = `
         }
 
         float hoverSpread = ${HOVER_SPREAD_SCALE} * u_hover * (1.0 - u_hover);
-        float hoverMask = step(1.0 - lum, u_hover + (t - 0.5) * hoverSpread);
+        float hoverMask = step(max(1.0 - lum, 0.001), u_hover + (t - 0.5) * hoverSpread);
         float a = 1.0 - hoverMask;
 
         float revealAlpha = step(lum, u_dissolve * (1.0 + (t - 0.5) * 0.4));
@@ -503,6 +503,9 @@ class DitherCanvas {
   }
 
   dissolveToBlack(duration) {
+    if (this.canvas) {
+      this.canvas.style.display = "";
+    }
     this.dissolve = 0;
     return this._tween("dissolve", 1, duration);
   }
@@ -510,7 +513,12 @@ class DitherCanvas {
   dissolveFromBlack(duration) {
     this.dissolve = 1.0;
     this.render();
-    return this._tween("dissolve", 0, duration);
+    const self = this;
+    return this._tween("dissolve", 0, duration).then(function () {
+      if (self.revealOnly && self.canvas) {
+        self.canvas.style.display = "none";
+      }
+    });
   }
 
   render() {
