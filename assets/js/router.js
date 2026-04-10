@@ -80,6 +80,11 @@ function revealTextElements() {
         socials.classList.add("reveal-line");
     }
 
+    const projectTitles = document.querySelectorAll(".project-item p");
+    projectTitles.forEach(function (p) {
+        p.classList.add("reveal-line");
+    });
+
     requestAnimationFrame(function () {
         for (let i = 0; i < children.length; i++) {
             const child = children[i];
@@ -93,6 +98,11 @@ function revealTextElements() {
             socials.style.transitionDelay = socialsDelay + "ms";
             socials.classList.add("is-visible");
         }
+
+        projectTitles.forEach(function (p, i) {
+            p.style.transitionDelay = (REVEAL_INITIAL_DELAY + (i * REVEAL_STAGGER_DELAY)) + "ms";
+            p.classList.add("is-visible");
+        });
     });
 }
 
@@ -115,6 +125,11 @@ function unrevealTextElements() {
         children[i].style.transitionDelay = delay + "ms";
         children[i].classList.remove("is-visible");
     }
+
+    document.querySelectorAll(".project-item p").forEach(function (p) {
+        p.style.transitionDelay = "0ms";
+        p.classList.remove("is-visible");
+    });
 }
 
 function performTransition(href, pushToHistory) {
