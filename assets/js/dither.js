@@ -1,4 +1,6 @@
-const PIXEL_SIZE = 3;
+const PIXEL_SIZE_DESKTOP = 3;
+const PIXEL_SIZE_MOBILE = 2;
+const BREAKPOINT_MOBILE = 768;
 const BAYER_SIZE = 8;
 const PALETTE_SIZE = 8;
 const ALPHA_THRESHOLD = 128;
@@ -12,6 +14,10 @@ const COLOR_WAVE_LEAD = 1.5;
 const HOVER_SPREAD_SCALE = 1.6;
 const EASE_SPLIT = 0.2;
 const EASING_POWER = 3;
+
+function getPixelSize() {
+  return window.innerWidth <= BREAKPOINT_MOBILE ? PIXEL_SIZE_MOBILE : PIXEL_SIZE_DESKTOP;
+}
 
 function isWebGLAvailable() {
   try {
@@ -51,7 +57,8 @@ const VERT = `
     }
 `;
 
-const FRAG = `
+function buildFrag(pixelSize) {
+  return `
     precision mediump float;
 
     uniform sampler2D u_image;
@@ -75,13 +82,13 @@ const FRAG = `
     }
 
     void main() {
-        vec2 pixelCoord = floor(v_uv * u_resolution / ${PIXEL_SIZE}.0) * ${PIXEL_SIZE}.0;
-        vec2 blockUV    = (pixelCoord + ${PIXEL_SIZE}.0 * 0.5) / u_resolution;
+        vec2 pixelCoord = floor(v_uv * u_resolution / ${pixelSize}.0) * ${pixelSize}.0;
+        vec2 blockUV    = (pixelCoord + ${pixelSize}.0 * 0.5) / u_resolution;
 
         vec3  col = texture2D(u_image, blockUV).rgb;
         float lum = dot(col, vec3(0.299, 0.587, 0.114));
 
-        vec2  blockPx = floor(v_uv * u_resolution / ${PIXEL_SIZE}.0);
+        vec2  blockPx = floor(v_uv * u_resolution / ${pixelSize}.0);
         vec2  bayerUV = mod(blockPx, ${BAYER_SIZE}.0) / ${BAYER_SIZE}.0;
         float t       = texture2D(u_bayer, bayerUV).r;
 
@@ -103,7 +110,7 @@ const FRAG = `
         float ratio = (total > 0.0) ? (1.0 - d0 / total) : 0.0;
         vec3 color = (t < ratio) ? c0 : c1;
 
-        vec2  dissolvePx = floor(v_uv * u_resolution / (${PIXEL_SIZE}.0 * 2.0));
+        vec2  dissolvePx = floor(v_uv * u_resolution / (${pixelSize}.0 * 2.0));
         vec2  dissolveUV = mod(dissolvePx, ${BAYER_SIZE}.0) / ${BAYER_SIZE}.0;
         float dissolveT  = texture2D(u_bayer, dissolveUV).r;
 
@@ -130,6 +137,7 @@ const FRAG = `
         gl_FragColor = mix(vec4(result * a, a), vec4(bgColor * revealAlpha, revealAlpha), u_reveal);
     }
 `;
+}
 
 function easeAsymmetric(p, split, power) {
   if (p < split) {
@@ -360,7 +368,7 @@ class DitherCanvas {
 
     const prog = gl.createProgram();
     gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
-    gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG));
+    gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, buildFrag(getPixelSize())));
     gl.linkProgram(prog);
 
     if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
