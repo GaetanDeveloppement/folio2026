@@ -87,8 +87,9 @@ function initScroll() {
   if (transitionItemTop !== null) {
     sessionStorage.removeItem(restoreKey);
     const targetY = parseFloat(transitionItemTop);
+    const isMobile = window.innerWidth <= 768;
     const cloneFirstItem = document.querySelector("#clone .project-item");
-    if (cloneFirstItem) {
+    if (!isMobile && cloneFirstItem) {
       const scrollOffset = cloneFirstItem.getBoundingClientRect().top - targetY;
       lenis.scrollTo(scrollOffset, { immediate: true });
       [

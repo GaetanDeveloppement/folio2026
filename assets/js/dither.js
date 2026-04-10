@@ -16,7 +16,9 @@ const EASE_SPLIT = 0.2;
 const EASING_POWER = 3;
 
 function getPixelSize() {
-  return window.innerWidth <= BREAKPOINT_MOBILE ? PIXEL_SIZE_MOBILE : PIXEL_SIZE_DESKTOP;
+  return window.innerWidth <= BREAKPOINT_MOBILE
+    ? PIXEL_SIZE_MOBILE
+    : PIXEL_SIZE_DESKTOP;
 }
 
 function isWebGLAvailable() {
@@ -33,12 +35,14 @@ function isWebGLAvailable() {
 let _mouseX = -1;
 let _mouseY = -1;
 let _lightMode = window.matchMedia("(prefers-color-scheme: light)").matches;
-window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function (e) {
-  _lightMode = e.matches;
-  ditherInstances.forEach(function (dc) {
-    dc.render();
+window
+  .matchMedia("(prefers-color-scheme: light)")
+  .addEventListener("change", function (e) {
+    _lightMode = e.matches;
+    ditherInstances.forEach(function (dc) {
+      dc.render();
+    });
   });
-});
 document.addEventListener(
   "mousemove",
   function (e) {
@@ -57,7 +61,7 @@ const VERT = `
     }
 `;
 
-function buildFrag(pixelSize) {
+function buildFrag(pixelSize, mobile) {
   return `
     precision mediump float;
 
@@ -130,7 +134,7 @@ function buildFrag(pixelSize) {
 
         float hoverSpread = ${HOVER_SPREAD_SCALE} * u_hover * (1.0 - u_hover);
         float hoverMask = step(max(1.0 - lum, 0.001), u_hover + (t - 0.5) * hoverSpread);
-        float a = 1.0 - hoverMask;
+        float a = ${mobile ? "1.0" : "1.0 - hoverMask"};
 
         float revealLum   = mix(lum, 1.0 - lum, u_light);
         float revealAlpha = step(revealLum, u_dissolve * (1.0 + t * 0.4));
@@ -269,8 +273,9 @@ class DitherCanvas {
       imgEl.style.visibility = "visible";
     }
 
+    this.isMobile = window.innerWidth <= BREAKPOINT_MOBILE;
     this.dissolve = 1.0;
-    this.hover = 0.0;
+    this.hover = this.isMobile ? 1.0 : 0.0;
     this._rafId = null;
     this._dissolveRafId = null;
     this._pollRafId = null;
@@ -282,7 +287,7 @@ class DitherCanvas {
 
     const self = this;
 
-    if (!this.revealOnly) {
+    if (!this.revealOnly && !this.isMobile) {
       function pollHover() {
         if (!self.gl) {
           return;
@@ -369,7 +374,11 @@ class DitherCanvas {
 
     const prog = gl.createProgram();
     gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
-    gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, buildFrag(getPixelSize())));
+    const isMobile = window.innerWidth <= BREAKPOINT_MOBILE;
+    gl.attachShader(
+      prog,
+      compile(gl.FRAGMENT_SHADER, buildFrag(getPixelSize(), isMobile)),
+    );
     gl.linkProgram(prog);
 
     if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
@@ -548,11 +557,13 @@ class DitherCanvas {
     this.dissolve = 1.0;
     this.render();
     const self = this;
-    return this._tween("dissolve", 0, duration, "_dissolveRafId").then(function () {
-      if (self.revealOnly && self.canvas) {
-        self.canvas.style.display = "none";
-      }
-    });
+    return this._tween("dissolve", 0, duration, "_dissolveRafId").then(
+      function () {
+        if (self.revealOnly && self.canvas) {
+          self.canvas.style.display = "none";
+        }
+      },
+    );
   }
 
   render() {
