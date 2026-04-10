@@ -69,7 +69,9 @@ body {
         }
     }
 
-    .reveal-line {
+    .info > div > *,
+    .info > .socials,
+    .project-item p {
         clip-path: inset(0 0 100% 0);
         transform: translateY($spacing-lg);
         opacity: 0;
@@ -77,12 +79,12 @@ body {
             clip-path 0.8s cubic-bezier(0.16, 1, 0.3, 1),
             transform 0.8s cubic-bezier(0.16, 1, 0.3, 1),
             opacity 0.6s ease;
-    }
 
-    .reveal-line.is-visible {
-        clip-path: inset(0 0 0 0);
-        transform: translateY(0);
-        opacity: 1;
+        &.is-visible {
+            clip-path: inset(0 0 0 0);
+            transform: translateY(0);
+            opacity: 1;
+        }
     }
 
     .socials {

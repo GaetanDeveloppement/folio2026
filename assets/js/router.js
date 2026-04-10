@@ -71,19 +71,8 @@ function revealTextElements() {
     }
 
     const children = info.children;
-    for (let i = 0; i < children.length; i++) {
-        children[i].classList.add("reveal-line");
-    }
-
     const socials = document.querySelector("main > .info > .socials");
-    if (socials) {
-        socials.classList.add("reveal-line");
-    }
-
     const projectTitles = document.querySelectorAll(".project-item p");
-    projectTitles.forEach(function (p) {
-        p.classList.add("reveal-line");
-    });
 
     requestAnimationFrame(function () {
         for (let i = 0; i < children.length; i++) {
