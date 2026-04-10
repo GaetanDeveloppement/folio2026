@@ -102,7 +102,8 @@ main {
 
     @media screen and (max-width: $breakpoint-mobile) {
         grid-template-columns: auto;
-        gap: $spacing-2xl;
+        grid-template-rows: 35svh 65svh;
+        gap: 0;
         padding: $spacing-sm;
     }
 
@@ -119,10 +120,6 @@ main {
     .projects {
         overflow: hidden;
         view-transition-name: images;
-
-        @media screen and (max-width: $breakpoint-mobile) {
-            height: 65svh;
-        }
     }
 
     .project-list {
