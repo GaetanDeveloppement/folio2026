@@ -275,6 +275,7 @@ class DitherCanvas {
     this._dissolveRafId = null;
     this._pollRafId = null;
     this._hoverActive = false;
+    this._hoverStart = null;
     this.textureReady = false;
     this.ro = null;
     this.revealOnly = document.body.dataset.layout === "project";
@@ -524,14 +525,21 @@ class DitherCanvas {
   }
 
   _animateOpacity(target) {
+    this._hoverStart = performance.now();
     this._tween("hover", target, HOVER_DURATION);
+  }
+
+  hoverRemaining() {
+    if (this._hoverStart === null) {
+      return 0;
+    }
+    return Math.max(0, HOVER_DURATION - (performance.now() - this._hoverStart));
   }
 
   dissolveToBlack(duration) {
     if (this.canvas) {
       this.canvas.style.display = "";
     }
-    cancelAnimationFrame(this._rafId);
     this.dissolve = 0;
     return this._tween("dissolve", 1, duration, "_dissolveRafId");
   }
@@ -697,3 +705,8 @@ window.initDither = initDither;
 window.destroyAllDither = destroyAllDither;
 window.dissolveAllToBlack = dissolveAllToBlack;
 window.dissolveAllFromBlack = dissolveAllFromBlack;
+window.getMaxHoverRemaining = function () {
+  return ditherInstances.reduce(function (max, dc) {
+    return Math.max(max, dc.hoverRemaining());
+  }, 0);
+};
