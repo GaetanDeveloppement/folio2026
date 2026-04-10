@@ -126,9 +126,8 @@ function buildFrag(pixelSize, mobile) {
         vec3 bgColor = mix(bgDark, bgLight, u_light);
 
         if (u_dissolve > 0.0) {
-            float spread      = 0.4 * (1.0 - u_dissolve);
             float dissolveLum = mix(lum, 1.0 - lum, u_light);
-            float mask        = step(dissolveLum, u_dissolve + (t - 0.5) * spread);
+            float mask        = step(dissolveLum, u_dissolve * (1.0 + t * 0.4));
             result = mix(result, bgColor, mask);
         }
 
