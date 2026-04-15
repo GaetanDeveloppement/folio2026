@@ -61,7 +61,7 @@ const VERT = `
     }
 `;
 
-function buildFrag(pixelSize, mobile) {
+function buildFrag(pixelSize) {
   return `
     precision mediump float;
 
@@ -118,7 +118,7 @@ function buildFrag(pixelSize, mobile) {
         vec2  dissolveUV = mod(dissolvePx, ${BAYER_SIZE}.0) / ${BAYER_SIZE}.0;
         float dissolveT  = texture2D(u_bayer, dissolveUV).r;
 
-        float colorHover = min(1.0, u_hover * ${COLOR_WAVE_LEAD});
+        float colorHover = 1.0;
         vec3 result = (dissolveT < colorHover) ? color : bw;
 
         vec3 bgDark  = vec3(0.012, 0.012, 0.008);
@@ -133,7 +133,7 @@ function buildFrag(pixelSize, mobile) {
 
         float hoverSpread = ${HOVER_SPREAD_SCALE} * u_hover * (1.0 - u_hover);
         float hoverMask = step(max(1.0 - lum, 0.001), u_hover + (t - 0.5) * hoverSpread);
-        float a = ${mobile ? "1.0" : "1.0 - hoverMask"};
+        float a = 1.0 - hoverMask;
 
         float revealLum   = mix(lum, 1.0 - lum, u_light);
         float revealAlpha = step(revealLum, u_dissolve * (1.0 + t * 0.4));
@@ -268,13 +268,10 @@ class DitherCanvas {
 
     imgEl.parentElement.appendChild(this.canvas);
     this._setup();
-    if (skipReveal) {
-      imgEl.style.visibility = "visible";
-    }
 
     this.isMobile = window.innerWidth <= BREAKPOINT_MOBILE;
     this.dissolve = 1.0;
-    this.hover = this.isMobile ? 1.0 : 0.0;
+    this.hover = 0.0;
     this._rafId = null;
     this._dissolveRafId = null;
     this._pollRafId = null;
@@ -283,6 +280,10 @@ class DitherCanvas {
     this.textureReady = false;
     this.ro = null;
     this.revealOnly = document.body.dataset.layout === "project";
+
+    if (skipReveal) {
+      imgEl.style.visibility = "visible";
+    }
 
     const self = this;
 
@@ -373,10 +374,9 @@ class DitherCanvas {
 
     const prog = gl.createProgram();
     gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
-    const isMobile = window.innerWidth <= BREAKPOINT_MOBILE;
     gl.attachShader(
       prog,
-      compile(gl.FRAGMENT_SHADER, buildFrag(getPixelSize(), isMobile)),
+      compile(gl.FRAGMENT_SHADER, buildFrag(getPixelSize())),
     );
     gl.linkProgram(prog);
 
