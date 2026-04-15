@@ -8,6 +8,7 @@ const COLOR_QUANTIZE_SHIFT = 4;
 const MIN_COLOR_DISTANCE_SQ = 2500;
 const MAX_PALETTE_SAMPLE_SIZE = 200;
 const HOVER_DURATION = 1500;
+const HOVER_EASE_SPLIT = 0.5;
 const DISSOLVE_REVEAL_DURATION = 2000;
 const DITHER_INIT_ATTR = "data-dither-initialized";
 const COLOR_WAVE_LEAD = 1.5;
@@ -147,6 +148,10 @@ function easeAsymmetric(p, split, power) {
     return 0.5 * Math.pow(p / split, power);
   }
   return 1 - 0.5 * Math.pow((1 - p) / (1 - split), power);
+}
+
+function easeOut(p) {
+  return 1.0 - Math.pow(1.0 - p, EASING_POWER);
 }
 
 function makeBayerMatrix(n) {
@@ -509,8 +514,9 @@ class DitherCanvas {
     this.render();
   }
 
-  _tween(prop, target, duration, rafKey) {
+  _tween(prop, target, duration, rafKey, easeFn) {
     const key = rafKey || "_rafId";
+    const ease = easeFn || function (p) { return easeAsymmetric(p, EASE_SPLIT, EASING_POWER); };
     cancelAnimationFrame(this[key]);
     const start = performance.now();
     const from = this[prop];
@@ -520,7 +526,7 @@ class DitherCanvas {
     return new Promise(function (resolve) {
       function tick(now) {
         const p = Math.min((now - start) / duration, 1.0);
-        self[prop] = from + delta * easeAsymmetric(p, EASE_SPLIT, EASING_POWER);
+        self[prop] = from + delta * ease(p);
         self.render();
         if (p < 1.0) {
           self[key] = requestAnimationFrame(tick);
@@ -534,14 +540,17 @@ class DitherCanvas {
 
   _animateOpacity(target) {
     this._hoverStart = performance.now();
-    this._tween("hover", target, HOVER_DURATION);
+    this._tween("hover", target, HOVER_DURATION, "_rafId", easeOut);
   }
 
   hoverRemaining() {
     if (this._hoverStart === null) {
       return 0;
     }
-    return Math.max(0, HOVER_DURATION - (performance.now() - this._hoverStart));
+    return Math.max(
+      0,
+      HOVER_DURATION - (performance.now() - this._hoverStart),
+    );
   }
 
   dissolveToBlack(duration) {
@@ -687,8 +696,12 @@ function dissolveAllToBlack(duration) {
 
   return Promise.all(
     ditherInstances
-      .filter(function (dc) { return !dc._hoverActive; })
-      .map(function (dc) { return dc.dissolveToBlack(duration); }),
+      .filter(function (dc) {
+        return !dc._hoverActive;
+      })
+      .map(function (dc) {
+        return dc.dissolveToBlack(duration);
+      }),
   );
 }
 
