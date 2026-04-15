@@ -548,6 +548,7 @@ class DitherCanvas {
     if (this.canvas) {
       this.canvas.style.display = "";
     }
+    cancelAnimationFrame(this._pollRafId);
     this.dissolve = 0;
     return this._tween("dissolve", 1, duration, "_dissolveRafId");
   }
@@ -685,9 +686,9 @@ function dissolveAllToBlack(duration) {
   }
 
   return Promise.all(
-    ditherInstances.map(function (dc) {
-      return dc.dissolveToBlack(duration);
-    }),
+    ditherInstances
+      .filter(function (dc) { return !dc._hoverActive; })
+      .map(function (dc) { return dc.dissolveToBlack(duration); }),
   );
 }
 
