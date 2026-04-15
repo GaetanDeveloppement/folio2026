@@ -128,15 +128,12 @@ function performTransition(href, pushToHistory) {
 
     isNavigating = true;
 
-    const hoverRemaining = window.getMaxHoverRemaining();
-    const dissolveDuration = DISSOLVE_DURATION + hoverRemaining;
-
     let fetchPromise = fetchPage(href);
 
     unrevealTextElements();
 
     Promise.all([
-        window.dissolveAllToBlack(dissolveDuration),
+        window.dissolveAllToBlack(DISSOLVE_DURATION),
     ])
         .then(function () {
             return fetchPromise;
