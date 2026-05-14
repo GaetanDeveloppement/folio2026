@@ -1,49 +1,34 @@
+import { Renderer, Program, Mesh, Texture, Triangle } from "ogl";
+
 const PIXEL_SIZE_DESKTOP = 3;
 const PIXEL_SIZE_MOBILE = 2;
 const BREAKPOINT_MOBILE = 768;
 const BAYER_SIZE = 8;
-const PALETTE_SIZE = 8;
-const ALPHA_THRESHOLD = 128;
-const COLOR_QUANTIZE_SHIFT = 4;
-const MIN_COLOR_DISTANCE_SQ = 2500;
-const MAX_PALETTE_SAMPLE_SIZE = 200;
+const PALETTE_SIZE = 32;
+const HOVER_SPREAD_SCALE = 2.1;
+
 const HOVER_DURATION = 1500;
 const HOVER_EASE_SPLIT = 0.5;
 const DISSOLVE_REVEAL_DURATION = 2000;
-const DITHER_INIT_ATTR = "data-dither-initialized";
-const COLOR_WAVE_LEAD = 1.5;
-const HOVER_SPREAD_SCALE = 1.6;
 const EASE_SPLIT = 0.2;
 const EASING_POWER = 3;
+const COLOR_WAVE_LEAD = 1.5;
 
-function getPixelSize() {
-  return window.innerWidth <= BREAKPOINT_MOBILE
-    ? PIXEL_SIZE_MOBILE
-    : PIXEL_SIZE_DESKTOP;
-}
+const ALPHA_THRESHOLD = 128;
+const COLOR_QUANTIZE_SHIFT = 2;
+const MIN_COLOR_DISTANCE_SQ = 2500;
+const MAX_PALETTE_SAMPLE_SIZE = 200;
 
-function isWebGLAvailable() {
-  try {
-    const canvas = document.createElement("canvas");
-    return !!(
-      canvas.getContext("webgl") || canvas.getContext("experimental-webgl")
-    );
-  } catch (e) {
-    return false;
-  }
-}
+const DITHER_INIT_ATTR = "data-dither-initialized";
+const SKIP_REVEAL_ATTR = "data-skip-reveal";
+const LIGHT_MODE_QUERY = "(prefers-color-scheme: light)";
+
+const ditherInstances = [];
 
 let _mouseX = -1;
 let _mouseY = -1;
-let _lightMode = window.matchMedia("(prefers-color-scheme: light)").matches;
-window
-  .matchMedia("(prefers-color-scheme: light)")
-  .addEventListener("change", function (e) {
-    _lightMode = e.matches;
-    ditherInstances.forEach(function (dc) {
-      dc.render();
-    });
-  });
+let _lightMode = window.matchMedia(LIGHT_MODE_QUERY).matches;
+
 document.addEventListener(
   "mousemove",
   function (e) {
@@ -53,12 +38,20 @@ document.addEventListener(
   { passive: true },
 );
 
+window.matchMedia(LIGHT_MODE_QUERY).addEventListener("change", function (e) {
+  _lightMode = e.matches;
+  ditherInstances.forEach(function (dc) {
+    dc.render();
+  });
+});
+
 const VERT = `
-    attribute vec2 a_pos;
+    attribute vec2 position;
+    attribute vec2 uv;
     varying vec2 v_uv;
     void main() {
-        v_uv = vec2(a_pos.x * 0.5 + 0.5, 0.5 - a_pos.y * 0.5);
-        gl_Position = vec4(a_pos, 0.0, 1.0);
+        v_uv = vec2(uv.x, 1.0 - uv.y);
+        gl_Position = vec4(position, 0.0, 1.0);
     }
 `;
 
@@ -143,6 +136,26 @@ function buildFrag(pixelSize) {
 `;
 }
 
+function getPixelSize() {
+  if (window.innerWidth <= BREAKPOINT_MOBILE) {
+    return PIXEL_SIZE_MOBILE;
+  }
+  return PIXEL_SIZE_DESKTOP;
+}
+
+function isWebGLAvailable() {
+  try {
+    const canvas = document.createElement("canvas");
+    return !!(
+      canvas.getContext("webgl2") ||
+      canvas.getContext("webgl") ||
+      canvas.getContext("experimental-webgl")
+    );
+  } catch (e) {
+    return false;
+  }
+}
+
 function easeAsymmetric(p, split, power) {
   if (p < split) {
     return 0.5 * Math.pow(p / split, power);
@@ -152,6 +165,10 @@ function easeAsymmetric(p, split, power) {
 
 function easeOut(p) {
   return 1.0 - Math.pow(1.0 - p, EASING_POWER);
+}
+
+function defaultTweenEase(p) {
+  return easeAsymmetric(p, EASE_SPLIT, EASING_POWER);
 }
 
 function makeBayerMatrix(n) {
@@ -217,14 +234,17 @@ function extractPalette(img) {
   ctx.drawImage(img, 0, 0, w, h);
   const { data } = ctx.getImageData(0, 0, w, h);
 
+  const BITS = 8 - COLOR_QUANTIZE_SHIFT;
+  const CHANNEL_MASK = (1 << BITS) - 1;
+
   const counts = new Map();
   for (let i = 0; i < data.length; i += 4) {
     if (data[i + 3] < ALPHA_THRESHOLD) {
       continue;
     }
     const key =
-      ((data[i] >> COLOR_QUANTIZE_SHIFT) << 8) |
-      ((data[i + 1] >> COLOR_QUANTIZE_SHIFT) << 4) |
+      ((data[i] >> COLOR_QUANTIZE_SHIFT) << (2 * BITS)) |
+      ((data[i + 1] >> COLOR_QUANTIZE_SHIFT) << BITS) |
       (data[i + 2] >> COLOR_QUANTIZE_SHIFT);
     counts.set(key, (counts.get(key) || 0) + 1);
   }
@@ -235,9 +255,9 @@ function extractPalette(img) {
 
   const selected = [];
   for (const [key] of sorted) {
-    const r = ((key >> 8) & 0xf) * 17;
-    const g = ((key >> 4) & 0xf) * 17;
-    const b = (key & 0xf) * 17;
+    const r = ((key >> (2 * BITS)) & CHANNEL_MASK) << COLOR_QUANTIZE_SHIFT;
+    const g = ((key >> BITS) & CHANNEL_MASK) << COLOR_QUANTIZE_SHIFT;
+    const b = (key & CHANNEL_MASK) << COLOR_QUANTIZE_SHIFT;
     const tooClose = selected.some(function (c) {
       const dr = r - c.r;
       const dg = g - c.g;
@@ -260,94 +280,236 @@ function extractPalette(img) {
   return selected;
 }
 
+function paletteToData(palette) {
+  return new Uint8Array(
+    palette.flatMap(function (c) {
+      return [c.r, c.g, c.b];
+    }),
+  );
+}
+
+function createImageTexture(gl) {
+  return new Texture(gl, {
+    wrapS: gl.CLAMP_TO_EDGE,
+    wrapT: gl.CLAMP_TO_EDGE,
+    minFilter: gl.LINEAR,
+    magFilter: gl.LINEAR,
+    generateMipmaps: false,
+    flipY: false,
+  });
+}
+
+function createDataTexture(gl, options) {
+  return new Texture(
+    gl,
+    Object.assign(
+      {
+        type: gl.UNSIGNED_BYTE,
+        minFilter: gl.NEAREST,
+        magFilter: gl.NEAREST,
+        generateMipmaps: false,
+        flipY: false,
+        unpackAlignment: 1,
+      },
+      options,
+    ),
+  );
+}
+
 class DitherCanvas {
+  dissolve = 1.0;
+  hover = 0.0;
+  textureReady = false;
+  _rafId = null;
+  _dissolveRafId = null;
+  _pollRafId = null;
+  _hoverActive = false;
+  _hoverStart = null;
+  _ro = null;
+
   constructor(imgEl, skipReveal = false) {
     this.img = imgEl;
+    this.skipReveal = skipReveal;
+    this.isMobile = window.innerWidth <= BREAKPOINT_MOBILE;
+    this.revealOnly = document.body.dataset.layout === "project";
+
     this.canvas = document.createElement("canvas");
     this.canvas.className = "parallax";
-    this.gl = this.canvas.getContext("webgl");
 
-    if (!this.gl) {
+    if (!this._initRenderer()) {
       return;
     }
 
     imgEl.parentElement.appendChild(this.canvas);
-    this._setup();
-
-    this.isMobile = window.innerWidth <= BREAKPOINT_MOBILE;
-    this.dissolve = 1.0;
-    this.hover = 0.0;
-    this._rafId = null;
-    this._dissolveRafId = null;
-    this._pollRafId = null;
-    this._hoverActive = false;
-    this._hoverStart = null;
-    this.textureReady = false;
-    this.ro = null;
-    this.revealOnly = document.body.dataset.layout === "project";
+    this._buildPipeline();
 
     if (skipReveal) {
       imgEl.style.visibility = "visible";
     }
 
-    const self = this;
-
     if (!this.revealOnly && !this.isMobile) {
-      function pollHover() {
-        if (!self.gl) {
-          return;
-        }
-        let isHovered = false;
-        if (_mouseX >= 0) {
-          const el = document.elementFromPoint(_mouseX, _mouseY);
-          isHovered = el !== null && self.img.parentElement.contains(el);
-        }
-        if (isHovered !== self._hoverActive) {
-          self._hoverActive = isHovered;
-          if (isHovered) {
-            self._handleEnter();
-          } else {
-            self._handleLeave();
-          }
-        }
-        self._pollRafId = requestAnimationFrame(pollHover);
-      }
-      this._pollRafId = requestAnimationFrame(pollHover);
+      this._startHoverPolling();
     }
 
-    function onReady() {
-      self._uploadTexture();
-      if (skipReveal) {
-        self.dissolve = 0.0;
-      }
-      self._resize();
-      self.ro = new ResizeObserver(function () {
-        self._resize();
+    this._waitForImage();
+  }
+
+  _initRenderer() {
+    try {
+      this.renderer = new Renderer({
+        canvas: this.canvas,
+        alpha: true,
+        premultipliedAlpha: false,
+        depth: false,
+        antialias: false,
+        autoClear: false,
+        dpr: 1,
       });
-      self.ro.observe(imgEl.parentElement);
-      if (!skipReveal) {
-        imgEl.style.visibility = "visible";
-        self.dissolveFromBlack(DISSOLVE_REVEAL_DURATION);
-      }
+    } catch (e) {
+      this.renderer = null;
     }
 
+    if (!this.renderer || !this.renderer.gl) {
+      return false;
+    }
+
+    this.canvas.style.width = "";
+    this.canvas.style.height = "";
+    this.gl = this.renderer.gl;
+    return true;
+  }
+
+  _buildPipeline() {
+    const gl = this.gl;
+
+    this.geometry = new Triangle(gl);
+
+    this.imgTex = createImageTexture(gl);
+
+    this.bayerTex = createDataTexture(gl, {
+      image: BAYER_DATA,
+      width: BAYER_SIZE,
+      height: BAYER_SIZE,
+      format: gl.LUMINANCE,
+      internalFormat: gl.LUMINANCE,
+      wrapS: gl.REPEAT,
+      wrapT: gl.REPEAT,
+    });
+
+    this.paletteTex = createDataTexture(gl, {
+      width: PALETTE_SIZE,
+      height: 1,
+      format: gl.RGB,
+      internalFormat: gl.RGB,
+      wrapS: gl.CLAMP_TO_EDGE,
+      wrapT: gl.CLAMP_TO_EDGE,
+    });
+
+    this.program = new Program(gl, {
+      vertex: VERT,
+      fragment: buildFrag(getPixelSize()),
+      uniforms: {
+        u_image: { value: this.imgTex },
+        u_bayer: { value: this.bayerTex },
+        u_palette: { value: this.paletteTex },
+        u_resolution: { value: [1, 1] },
+        u_dissolve: { value: this.dissolve },
+        u_hover: { value: this.hover },
+        u_reveal: { value: 0 },
+        u_light: { value: 0 },
+      },
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      cullFace: null,
+    });
+    this.program.setBlendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+
+    this.mesh = new Mesh(gl, {
+      geometry: this.geometry,
+      program: this.program,
+    });
+  }
+
+  _startHoverPolling() {
+    const self = this;
+    function tick() {
+      if (!self.gl) {
+        return;
+      }
+      const hovered = self._isMouseOver();
+      if (hovered !== self._hoverActive) {
+        self._hoverActive = hovered;
+        if (hovered) {
+          self._handleEnter();
+        } else {
+          self._handleLeave();
+        }
+      }
+      self._pollRafId = requestAnimationFrame(tick);
+    }
+    this._pollRafId = requestAnimationFrame(tick);
+  }
+
+  _isMouseOver() {
+    if (_mouseX < 0) {
+      return false;
+    }
+    const el = document.elementFromPoint(_mouseX, _mouseY);
+    return el !== null && this.img.parentElement.contains(el);
+  }
+
+  _waitForImage() {
+    const self = this;
+    function onReady() {
+      self._onImageReady();
+    }
     function onError() {
       self.destroy();
     }
-
-    if (imgEl.complete && imgEl.naturalWidth > 0) {
+    if (this.img.complete && this.img.naturalWidth > 0) {
       onReady();
-    } else {
-      imgEl.addEventListener("load", onReady);
-      imgEl.addEventListener("error", onError);
+      return;
+    }
+    this.img.addEventListener("load", onReady);
+    this.img.addEventListener("error", onError);
+  }
+
+  _onImageReady() {
+    this._uploadTextures();
+
+    if (this.skipReveal) {
+      this.dissolve = 0.0;
+    }
+
+    this._resize();
+
+    const self = this;
+    this._ro = new ResizeObserver(function () {
+      self._resize();
+    });
+    this._ro.observe(this.img.parentElement);
+
+    if (!this.skipReveal) {
+      this.img.style.visibility = "visible";
+      this.dissolveFromBlack(DISSOLVE_REVEAL_DURATION);
     }
   }
 
+  _uploadTextures() {
+    this.imgTex.image = this.img;
+    this.imgTex.needsUpdate = true;
+
+    this.paletteTex.image = paletteToData(extractPalette(this.img));
+    this.paletteTex.needsUpdate = true;
+
+    this.textureReady = true;
+  }
+
   _getTwin() {
-    const mySrc = this.img.src;
     const self = this;
     return ditherInstances.find(function (dc) {
-      return dc !== self && dc.img.src === mySrc;
+      return dc !== self && dc.img.src === self.img.src;
     });
   }
 
@@ -364,159 +526,14 @@ class DitherCanvas {
     this._animateOpacity(0);
   }
 
-  _setup() {
-    const gl = this.gl;
-
-    function compile(type, src) {
-      const s = gl.createShader(type);
-      gl.shaderSource(s, src);
-      gl.compileShader(s);
-      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-        throw new Error(gl.getShaderInfoLog(s));
-      }
-      return s;
-    }
-
-    const prog = gl.createProgram();
-    gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
-    gl.attachShader(
-      prog,
-      compile(gl.FRAGMENT_SHADER, buildFrag(getPixelSize())),
-    );
-    gl.linkProgram(prog);
-
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-      throw new Error(gl.getProgramInfoLog(prog));
-    }
-
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    gl.useProgram(prog);
-    this.prog = prog;
-
-    this.buf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.buf);
-    gl.bufferData(
-      gl.ARRAY_BUFFER,
-      new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]),
-      gl.STATIC_DRAW,
-    );
-
-    const aPos = gl.getAttribLocation(prog, "a_pos");
-    gl.enableVertexAttribArray(aPos);
-    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
-
-    this.u = {
-      image: gl.getUniformLocation(prog, "u_image"),
-      bayer: gl.getUniformLocation(prog, "u_bayer"),
-      palette: gl.getUniformLocation(prog, "u_palette"),
-      resolution: gl.getUniformLocation(prog, "u_resolution"),
-      dissolve: gl.getUniformLocation(prog, "u_dissolve"),
-      hover: gl.getUniformLocation(prog, "u_hover"),
-      reveal: gl.getUniformLocation(prog, "u_reveal"),
-      light: gl.getUniformLocation(prog, "u_light"),
-    };
-
-    this.bayerTex = this._makeTex(
-      BAYER_DATA,
-      BAYER_SIZE,
-      gl.LUMINANCE,
-      gl.REPEAT,
-    );
-
-    this.paletteTex = this._makeTex(null, 1, gl.RGB, gl.CLAMP_TO_EDGE);
-
-    this.imgTex = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, this.imgTex);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  }
-
-  _makeTex(data, size, format, wrap) {
-    const gl = this.gl;
-    const t = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, t);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-
-    if (data) {
-      gl.texImage2D(
-        gl.TEXTURE_2D,
-        0,
-        format,
-        size,
-        size,
-        0,
-        format,
-        gl.UNSIGNED_BYTE,
-        data,
-      );
-    }
-
-    return t;
-  }
-
-  _uploadTexture() {
-    const gl = this.gl;
-
-    gl.bindTexture(gl.TEXTURE_2D, this.imgTex);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      gl.RGBA,
-      gl.RGBA,
-      gl.UNSIGNED_BYTE,
-      this.img,
-    );
-
-    const palette = extractPalette(this.img);
-    const palData = new Uint8Array(
-      palette.flatMap(function (c) {
-        return [c.r, c.g, c.b];
-      }),
-    );
-
-    gl.bindTexture(gl.TEXTURE_2D, this.paletteTex);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      gl.RGB,
-      PALETTE_SIZE,
-      1,
-      0,
-      gl.RGB,
-      gl.UNSIGNED_BYTE,
-      palData,
-    );
-
-    this.textureReady = true;
-  }
-
-  _resize() {
-    const rect = this.img.getBoundingClientRect();
-    const w = Math.round(rect.width);
-    const h = Math.round(rect.height);
-
-    if (w === 0 || h === 0) {
-      return;
-    }
-
-    this.canvas.width = w;
-    this.canvas.height = h;
-    const gl = this.gl;
-    gl.useProgram(this.prog);
-    gl.viewport(0, 0, w, h);
-    gl.uniform2f(this.u.resolution, w, h);
-    this.render();
+  _animateOpacity(target) {
+    this._hoverStart = performance.now();
+    this._tween("hover", target, HOVER_DURATION, "_rafId", easeOut);
   }
 
   _tween(prop, target, duration, rafKey, easeFn) {
     const key = rafKey || "_rafId";
-    const ease = easeFn || function (p) { return easeAsymmetric(p, EASE_SPLIT, EASING_POWER); };
+    const ease = easeFn || defaultTweenEase;
     cancelAnimationFrame(this[key]);
     const start = performance.now();
     const from = this[prop];
@@ -538,19 +555,28 @@ class DitherCanvas {
     });
   }
 
-  _animateOpacity(target) {
-    this._hoverStart = performance.now();
-    this._tween("hover", target, HOVER_DURATION, "_rafId", easeOut);
+  _resize() {
+    const rect = this.img.getBoundingClientRect();
+    const w = Math.round(rect.width);
+    const h = Math.round(rect.height);
+
+    if (w === 0 || h === 0) {
+      return;
+    }
+
+    this.canvas.width = w;
+    this.canvas.height = h;
+    this.renderer.width = w;
+    this.renderer.height = h;
+    this.program.uniforms.u_resolution.value = [w, h];
+    this.render();
   }
 
   hoverRemaining() {
     if (this._hoverStart === null) {
       return 0;
     }
-    return Math.max(
-      0,
-      HOVER_DURATION - (performance.now() - this._hoverStart),
-    );
+    return Math.max(0, HOVER_DURATION - (performance.now() - this._hoverStart));
   }
 
   dissolveToBlack(duration) {
@@ -576,31 +602,19 @@ class DitherCanvas {
   }
 
   render() {
-    if (!this.textureReady) {
+    if (!this.textureReady || !this.gl) {
       return;
     }
 
-    const gl = this.gl;
-    gl.useProgram(this.prog);
+    this.renderer.setViewport(this.canvas.width, this.canvas.height);
 
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this.imgTex);
-    gl.uniform1i(this.u.image, 0);
+    const u = this.program.uniforms;
+    u.u_dissolve.value = this.dissolve;
+    u.u_hover.value = this.hover;
+    u.u_reveal.value = this.revealOnly ? 1.0 : 0.0;
+    u.u_light.value = _lightMode ? 1.0 : 0.0;
 
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, this.bayerTex);
-    gl.uniform1i(this.u.bayer, 1);
-
-    gl.activeTexture(gl.TEXTURE2);
-    gl.bindTexture(gl.TEXTURE_2D, this.paletteTex);
-    gl.uniform1i(this.u.palette, 2);
-
-    gl.uniform1f(this.u.dissolve, this.dissolve);
-    gl.uniform1f(this.u.hover, this.hover);
-    gl.uniform1f(this.u.reveal, this.revealOnly ? 1.0 : 0.0);
-    gl.uniform1f(this.u.light, _lightMode ? 1.0 : 0.0);
-
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    this.mesh.draw();
   }
 
   destroy() {
@@ -608,35 +622,11 @@ class DitherCanvas {
     cancelAnimationFrame(this._dissolveRafId);
     cancelAnimationFrame(this._pollRafId);
 
-    if (this.ro) {
-      this.ro.disconnect();
+    if (this._ro) {
+      this._ro.disconnect();
     }
 
-    if (this.gl) {
-      const gl = this.gl;
-      if (this.imgTex) {
-        gl.deleteTexture(this.imgTex);
-      }
-      if (this.bayerTex) {
-        gl.deleteTexture(this.bayerTex);
-      }
-      if (this.paletteTex) {
-        gl.deleteTexture(this.paletteTex);
-      }
-      if (this.buf) {
-        gl.deleteBuffer(this.buf);
-      }
-      if (this.prog) {
-        gl.deleteProgram(this.prog);
-      }
-
-      const loseContext = gl.getExtension("WEBGL_lose_context");
-      if (loseContext) {
-        loseContext.loseContext();
-      }
-
-      this.gl = null;
-    }
+    this._releaseGL();
 
     if (this.canvas && this.canvas.parentElement) {
       this.canvas.remove();
@@ -649,10 +639,36 @@ class DitherCanvas {
       ditherInstances.splice(idx, 1);
     }
   }
-}
 
-const ditherInstances = [];
-window._ditherInstances = ditherInstances;
+  _releaseGL() {
+    if (!this.gl) {
+      return;
+    }
+
+    const gl = this.gl;
+    const textures = [this.imgTex, this.bayerTex, this.paletteTex];
+    for (const tex of textures) {
+      if (tex && tex.texture) {
+        gl.deleteTexture(tex.texture);
+      }
+    }
+
+    if (this.geometry) {
+      this.geometry.remove();
+    }
+    if (this.program) {
+      this.program.remove();
+    }
+
+    const loseContext = gl.getExtension("WEBGL_lose_context");
+    if (loseContext) {
+      loseContext.loseContext();
+    }
+
+    this.gl = null;
+    this.renderer = null;
+  }
+}
 
 function initDither(root) {
   if (!root) {
@@ -673,9 +689,9 @@ function initDither(root) {
 
     img.setAttribute(DITHER_INIT_ATTR, "true");
 
-    const skipReveal = img.hasAttribute("data-skip-reveal");
+    const skipReveal = img.hasAttribute(SKIP_REVEAL_ATTR);
     if (skipReveal) {
-      img.removeAttribute("data-skip-reveal");
+      img.removeAttribute(SKIP_REVEAL_ATTR);
     }
 
     ditherInstances.push(new DitherCanvas(img, skipReveal));
@@ -684,8 +700,7 @@ function initDither(root) {
 
 function destroyAllDither() {
   while (ditherInstances.length > 0) {
-    const instance = ditherInstances[0];
-    instance.destroy();
+    ditherInstances[0].destroy();
   }
 }
 
@@ -693,7 +708,6 @@ function dissolveAllToBlack(duration) {
   if (ditherInstances.length === 0) {
     return Promise.resolve();
   }
-
   return Promise.all(
     ditherInstances
       .filter(function (dc) {
@@ -709,7 +723,6 @@ function dissolveAllFromBlack(duration) {
   if (ditherInstances.length === 0) {
     return Promise.resolve();
   }
-
   return Promise.all(
     ditherInstances.map(function (dc) {
       return dc.dissolveFromBlack(duration);
@@ -717,9 +730,19 @@ function dissolveAllFromBlack(duration) {
   );
 }
 
-document.addEventListener("DOMContentLoaded", function () {
+function getMaxHoverRemaining() {
+  return ditherInstances.reduce(function (max, dc) {
+    return Math.max(max, dc.hoverRemaining());
+  }, 0);
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", function () {
+    initDither();
+  });
+} else {
   initDither();
-});
+}
 
 window.addEventListener("ditherInitClone", function (e) {
   initDither(e.detail);
@@ -729,8 +752,5 @@ window.initDither = initDither;
 window.destroyAllDither = destroyAllDither;
 window.dissolveAllToBlack = dissolveAllToBlack;
 window.dissolveAllFromBlack = dissolveAllFromBlack;
-window.getMaxHoverRemaining = function () {
-  return ditherInstances.reduce(function (max, dc) {
-    return Math.max(max, dc.hoverRemaining());
-  }, 0);
-};
+window.getMaxHoverRemaining = getMaxHoverRemaining;
+window._ditherInstances = ditherInstances;

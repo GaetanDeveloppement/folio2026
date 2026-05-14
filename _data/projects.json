@@ -29,16 +29,17 @@
   },
   {
     "title": "Phronesis — interactive machine",
-    "image": "phronesis-1.webp",
+    "image": "phronesis-7.webp",
     "alt": "Phronesis' interactive machine",
     "page": "phronesis",
     "images": [
       "phronesis-1.webp",
-      "phronesis-1.webp",
-      "phronesis-1.webp",
-      "phronesis-1.webp",
-      "phronesis-1.webp",
-      "phronesis-1.webp"
+      "phronesis-2.webp",
+      "phronesis-3.webp",
+      "phronesis-4.webp",
+      "phronesis-5.webp",
+      "phronesis-6.webp",
+      "phronesis-7.webp"
     ]
   },
   {
@@ -57,17 +58,22 @@
   },
   {
     "title": "Shark — vfx",
-    "image": "shark.webp",
+    "image": "shark-1.webp",
     "alt": "Close up of a motorcycle rear wheel at night",
     "page": "shark",
     "images": [
-      "shark.webp",
-      "shark.webp",
-      "shark.webp",
-      "shark.webp",
-      "shark.webp",
-      "shark.webp",
-      "shark.webp"
+      "shark-1.webp",
+      "shark-2.webp",
+      "shark-3.webp",
+      "shark-4.webp",
+      "shark-5.webp"
     ]
+  },
+  {
+    "title": "Nolka — branding",
+    "image": "nolka-1.webp",
+    "alt": "A coffee shop named nolka",
+    "page": "nolka",
+    "images": ["nolka-1.webp", "nolka-2.webp", "nolka-3.webp", "nolka-4.webp"]
   }
 ]

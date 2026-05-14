@@ -1,0 +1,11 @@
+{
+  "name": "folio-rework",
+  "private": true,
+  "scripts": {
+    "vendor:ogl": "node scripts/vendor-ogl.mjs",
+    "postinstall": "pnpm run vendor:ogl"
+  },
+  "dependencies": {
+    "ogl": "1.0.11"
+  }
+}
