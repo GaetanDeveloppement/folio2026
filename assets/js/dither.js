@@ -15,6 +15,9 @@ const COLOR_WAVE_LEAD = 1.5;
 const HOVER_SPREAD_SCALE = 1.6;
 const EASE_SPLIT = 0.2;
 const EASING_POWER = 3;
+// Hover circle (cursor-following reveal mask, single physical disk that bleeds across canvases)
+const HOVER_CIRCLE_RADIUS_PX = 900; // radius in CSS pixels — same physical size on every image
+const HOVER_CIRCLE_FALLOFF = 0.9; // soft-edge width as fraction of radius (0 = hard edge, 1 = fully soft)
 
 function getPixelSize() {
   return window.innerWidth <= BREAKPOINT_MOBILE
@@ -52,6 +55,10 @@ document.addEventListener(
   },
   { passive: true },
 );
+document.addEventListener("mouseleave", function () {
+  _mouseX = -1;
+  _mouseY = -1;
+});
 
 const VERT = `
     attribute vec2 a_pos;
@@ -74,6 +81,8 @@ function buildFrag(pixelSize) {
     uniform float     u_hover;
     uniform float     u_reveal;
     uniform float     u_light;
+    uniform vec2      u_mouse;
+    uniform float     u_radius;
 
     varying vec2 v_uv;
 
@@ -132,8 +141,18 @@ function buildFrag(pixelSize) {
             result = mix(result, bgColor, mask);
         }
 
-        float hoverSpread = ${HOVER_SPREAD_SCALE} * u_hover * (1.0 - u_hover);
-        float hoverMask = step(max(1.0 - lum, 0.001), u_hover + (t - 0.5) * hoverSpread);
+        float aspect       = u_resolution.x / u_resolution.y;
+        vec2  circleDelta  = (v_uv - u_mouse) * vec2(aspect, 1.0);
+        float circleDist   = length(circleDelta);
+        float safeRadius   = max(u_radius, 0.0001);
+        float falloffStart = safeRadius * (1.0 - ${HOVER_CIRCLE_FALLOFF});
+        float circleMask   = (u_radius > 0.0)
+            ? (1.0 - smoothstep(falloffStart, safeRadius, circleDist))
+            : 0.0;
+
+        float effectiveHover = u_hover * circleMask;
+        float hoverSpread = ${HOVER_SPREAD_SCALE} * effectiveHover * (1.0 - effectiveHover);
+        float hoverMask = step(max(1.0 - lum, 0.001), effectiveHover + (t - 0.5) * hoverSpread);
         float a = 1.0 - hoverMask;
 
         float revealLum   = mix(lum, 1.0 - lum, u_light);
@@ -277,10 +296,14 @@ class DitherCanvas {
     this.isMobile = window.innerWidth <= BREAKPOINT_MOBILE;
     this.dissolve = 1.0;
     this.hover = 0.0;
+    this.mouse = [0.5, 0.5];
+    this.radius = 0.0;
     this._rafId = null;
     this._dissolveRafId = null;
     this._pollRafId = null;
+    this._radiusRafId = null;
     this._hoverActive = false;
+    this._pointerOver = false;
     this._hoverStart = null;
     this.textureReady = false;
     this.ro = null;
@@ -297,19 +320,55 @@ class DitherCanvas {
         if (!self.gl) {
           return;
         }
-        let isHovered = false;
-        if (_mouseX >= 0) {
-          const el = document.elementFromPoint(_mouseX, _mouseY);
-          isHovered = el !== null && self.img.parentElement.contains(el);
+
+        const rect = self.canvas.getBoundingClientRect();
+        let inRange = false;
+        let pointerOver = false;
+        let nx = self.mouse[0];
+        let ny = self.mouse[1];
+        let radiusH = self.radius;
+
+        if (_mouseX >= 0 && rect.width > 0 && rect.height > 0) {
+          nx = (_mouseX - rect.left) / rect.width;
+          ny = (_mouseY - rect.top) / rect.height;
+
+          // Same height-normalized aspect-corrected metric as the shader.
+          const aspect = rect.width / rect.height;
+          const cx = Math.max(0, Math.min(1, nx));
+          const cy = Math.max(0, Math.min(1, ny));
+          const dx = (nx - cx) * aspect;
+          const dy = ny - cy;
+          const distH = Math.sqrt(dx * dx + dy * dy);
+
+          radiusH = HOVER_CIRCLE_RADIUS_PX / rect.height;
+          inRange = distH < radiusH;
+          pointerOver = nx >= 0 && nx <= 1 && ny >= 0 && ny <= 1;
         }
-        if (isHovered !== self._hoverActive) {
-          self._hoverActive = isHovered;
-          if (isHovered) {
+
+        self._pointerOver = pointerOver;
+
+        if (inRange !== self._hoverActive) {
+          self._hoverActive = inRange;
+          if (inRange) {
             self._handleEnter();
           } else {
             self._handleLeave();
           }
         }
+
+        if (inRange) {
+          if (
+            nx !== self.mouse[0] ||
+            ny !== self.mouse[1] ||
+            radiusH !== self.radius
+          ) {
+            self.mouse[0] = nx;
+            self.mouse[1] = ny;
+            self.radius = radiusH;
+            self.render();
+          }
+        }
+
         self._pollRafId = requestAnimationFrame(pollHover);
       }
       this._pollRafId = requestAnimationFrame(pollHover);
@@ -357,6 +416,7 @@ class DitherCanvas {
       this.hover = twin.hover;
       this.render();
     }
+    cancelAnimationFrame(this._radiusRafId);
     this._animateOpacity(1);
   }
 
@@ -415,6 +475,8 @@ class DitherCanvas {
       hover: gl.getUniformLocation(prog, "u_hover"),
       reveal: gl.getUniformLocation(prog, "u_reveal"),
       light: gl.getUniformLocation(prog, "u_light"),
+      mouse: gl.getUniformLocation(prog, "u_mouse"),
+      radius: gl.getUniformLocation(prog, "u_radius"),
     };
 
     this.bayerTex = this._makeTex(
@@ -516,7 +578,11 @@ class DitherCanvas {
 
   _tween(prop, target, duration, rafKey, easeFn) {
     const key = rafKey || "_rafId";
-    const ease = easeFn || function (p) { return easeAsymmetric(p, EASE_SPLIT, EASING_POWER); };
+    const ease =
+      easeFn ||
+      function (p) {
+        return easeAsymmetric(p, EASE_SPLIT, EASING_POWER);
+      };
     cancelAnimationFrame(this[key]);
     const start = performance.now();
     const from = this[prop];
@@ -547,10 +613,7 @@ class DitherCanvas {
     if (this._hoverStart === null) {
       return 0;
     }
-    return Math.max(
-      0,
-      HOVER_DURATION - (performance.now() - this._hoverStart),
-    );
+    return Math.max(0, HOVER_DURATION - (performance.now() - this._hoverStart));
   }
 
   dissolveToBlack(duration) {
@@ -559,7 +622,28 @@ class DitherCanvas {
     }
     cancelAnimationFrame(this._pollRafId);
     this.dissolve = 0;
+    // Bleed canvases have hover > 0, which makes them transparent inside the
+    // circle (revealing the original <img> behind, which the dissolve doesn't
+    // touch). Fade hover alongside the dissolve so the bleed circle closes.
+    this._tween("hover", 0, duration, "_rafId", easeOut);
     return this._tween("dissolve", 1, duration, "_dissolveRafId");
+  }
+
+  growCircleAndCover(duration) {
+    cancelAnimationFrame(this._pollRafId);
+    cancelAnimationFrame(this._rafId);
+    this.hover = 1.0;
+    const aspect = this.canvas.width / this.canvas.height;
+    const dx = Math.max(this.mouse[0], 1 - this.mouse[0]) * aspect;
+    const dy = Math.max(this.mouse[1], 1 - this.mouse[1]);
+    const maxDist = Math.sqrt(dx * dx + dy * dy);
+    // The shader's inner fully-revealed zone is radius * (1 - falloff). For
+    // the whole canvas to be fully revealed we need that inner edge to reach
+    // past the farthest corner — otherwise the corners only land in the soft
+    // falloff zone and look partially revealed.
+    const innerFraction = Math.max(1 - HOVER_CIRCLE_FALLOFF, 0.01);
+    const target = (maxDist / innerFraction) * 1.05;
+    return this._tween("radius", target, duration, "_radiusRafId", easeOut);
   }
 
   dissolveFromBlack(duration) {
@@ -599,6 +683,8 @@ class DitherCanvas {
     gl.uniform1f(this.u.hover, this.hover);
     gl.uniform1f(this.u.reveal, this.revealOnly ? 1.0 : 0.0);
     gl.uniform1f(this.u.light, _lightMode ? 1.0 : 0.0);
+    gl.uniform2f(this.u.mouse, this.mouse[0], this.mouse[1]);
+    gl.uniform1f(this.u.radius, this.radius);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
@@ -607,6 +693,7 @@ class DitherCanvas {
     cancelAnimationFrame(this._rafId);
     cancelAnimationFrame(this._dissolveRafId);
     cancelAnimationFrame(this._pollRafId);
+    cancelAnimationFrame(this._radiusRafId);
 
     if (this.ro) {
       this.ro.disconnect();
@@ -697,10 +784,26 @@ function dissolveAllToBlack(duration) {
   return Promise.all(
     ditherInstances
       .filter(function (dc) {
-        return !dc._hoverActive;
+        return !dc._pointerOver;
       })
       .map(function (dc) {
         return dc.dissolveToBlack(duration);
+      }),
+  );
+}
+
+function growHoveredCircles(duration) {
+  if (ditherInstances.length === 0) {
+    return Promise.resolve();
+  }
+
+  return Promise.all(
+    ditherInstances
+      .filter(function (dc) {
+        return dc._pointerOver;
+      })
+      .map(function (dc) {
+        return dc.growCircleAndCover(duration);
       }),
   );
 }
@@ -729,6 +832,7 @@ window.initDither = initDither;
 window.destroyAllDither = destroyAllDither;
 window.dissolveAllToBlack = dissolveAllToBlack;
 window.dissolveAllFromBlack = dissolveAllFromBlack;
+window.growHoveredCircles = growHoveredCircles;
 window.getMaxHoverRemaining = function () {
   return ditherInstances.reduce(function (max, dc) {
     return Math.max(max, dc.hoverRemaining());

@@ -134,6 +134,7 @@ function performTransition(href, pushToHistory) {
 
     Promise.all([
         window.dissolveAllToBlack(DISSOLVE_DURATION),
+        window.growHoveredCircles(DISSOLVE_DURATION),
     ])
         .then(function () {
             return fetchPromise;
