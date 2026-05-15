@@ -44,7 +44,7 @@
                 <div>
                     {{ content }}
                     <a href="{{ '/' | relative_url }}" data-transition="true"
-                        >back</a
+                        >retour</a
                     >
                 </div>
             </div>
@@ -83,7 +83,7 @@
                         {% for project in site.data.projects %}
                         <div class="project-item">
                             <a
-                                href="{{ '/' | append: project.page | append: '.html' | relative_url }}"
+                                href="{{ '/' | append: 'projects/'  | append: project.page | relative_url }}"
                             >
                                 <div class="image-container dither-wrap">
                                     {% include responsive-image.html
@@ -101,7 +101,10 @@
         </main>
 
         <script src="https://unpkg.com/lenis@1.3.15/dist/lenis.min.js"></script>
-        <script src="{{ '/assets/js/dither.js' | relative_url }}"></script>
+        <script type="importmap">
+            { "imports": { "ogl": "{{ '/assets/js/lib/ogl/index.js' | relative_url }}" } }
+        </script>
+        <script type="module" src="{{ '/assets/js/dither.js' | relative_url }}"></script>
         <script src="{{ '/assets/js/index.js' | relative_url }}"></script>
         <script src="{{ '/assets/js/router.js' | relative_url }}"></script>
     </body>
