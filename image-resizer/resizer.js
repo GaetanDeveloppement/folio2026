@@ -5,6 +5,7 @@ const path = require("path");
 // Configuration
 const inputFolder = "./input";
 const outputFolder = "../assets/image/generated/";
+const projectsFile = "../_data/projects.json";
 
 // Sizes based on common device widths
 // Mobile: 100vw - 24px → targeting ~350-750px range
@@ -20,49 +21,114 @@ const sizes = [
   1710, // XL desktop ((2800 * 0.5 - 32) * 1.25)
 ];
 
+const inputExtRegex = /\.(png|jpg|jpeg|webp)$/i;
+const generatedFileRegex = /^(.+)-(\d+)\.(png|webp)$/i;
+
 // Create output folder if it doesn't exist
 if (!fs.existsSync(outputFolder)) {
   fs.mkdirSync(outputFolder, { recursive: true });
 }
 
+// Collect base names referenced by projects.json (image + images[])
+function collectReferencedBaseNames() {
+  const referenced = new Set();
+  if (!fs.existsSync(projectsFile)) {
+    return referenced;
+  }
+  try {
+    const projects = JSON.parse(fs.readFileSync(projectsFile, "utf8"));
+    for (const project of projects) {
+      if (project.image) {
+        referenced.add(path.parse(project.image).name);
+      }
+      if (Array.isArray(project.images)) {
+        for (const image of project.images) {
+          referenced.add(path.parse(image).name);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`Could not parse ${projectsFile}: ${err.message}`);
+  }
+  return referenced;
+}
+
+// Remove generated files whose base name has no source and isn't referenced
+function cleanOrphans(inputBaseNames) {
+  if (!fs.existsSync(outputFolder)) {
+    return;
+  }
+  const referenced = collectReferencedBaseNames();
+  const sizesSet = new Set(sizes);
+  let removed = 0;
+
+  for (const file of fs.readdirSync(outputFolder)) {
+    const match = file.match(generatedFileRegex);
+    if (!match) {
+      continue;
+    }
+    const baseName = match[1];
+    const size = Number(match[2]);
+    if (!sizesSet.has(size)) {
+      continue;
+    }
+    if (inputBaseNames.has(baseName) || referenced.has(baseName)) {
+      continue;
+    }
+
+    fs.unlinkSync(path.join(outputFolder, file));
+    console.log(`✗ Removed orphan: ${file}`);
+    removed++;
+  }
+
+  if (removed > 0) {
+    console.log(`\nCleaned up ${removed} orphan file(s).`);
+  } else {
+    console.log("\nNo orphans to clean.");
+  }
+}
+
 // Main async function
 async function processImages() {
   // Get all image files from input folder
-  const files = fs
-    .readdirSync(inputFolder)
-    .filter((file) => /\.(png|jpg|jpeg|webp)$/i.test(file));
+  const files = fs.existsSync(inputFolder)
+    ? fs.readdirSync(inputFolder).filter((file) => inputExtRegex.test(file))
+    : [];
+
+  const inputBaseNames = new Set(files.map((file) => path.parse(file).name));
 
   if (files.length === 0) {
-    console.log("No images found in input folder!");
-    return;
-  }
+    console.log("No images found in input folder.");
+  } else {
+    // Process each image
+    for (const file of files) {
+      const inputPath = path.join(inputFolder, file);
+      const baseName = path.parse(file).name;
 
-  // Process each image
-  for (const file of files) {
-    const inputPath = path.join(inputFolder, file);
-    const baseName = path.parse(file).name;
+      console.log(`Processing ${file}...`);
 
-    console.log(`Processing ${file}...`);
+      for (const size of sizes) {
+        // Generate PNG
+        await sharp(inputPath)
+          .resize(size)
+          .png({ quality: 90 })
+          .toFile(path.join(outputFolder, `${baseName}-${size}.png`));
 
-    for (const size of sizes) {
-      // Generate PNG
-      await sharp(inputPath)
-        .resize(size)
-        .png({ quality: 90 })
-        .toFile(path.join(outputFolder, `${baseName}-${size}.png`));
+        // Generate WebP
+        await sharp(inputPath)
+          .resize(size)
+          .webp({ quality: 85 })
+          .toFile(path.join(outputFolder, `${baseName}-${size}.webp`));
+      }
 
-      // Generate WebP
-      await sharp(inputPath)
-        .resize(size)
-        .webp({ quality: 85 })
-        .toFile(path.join(outputFolder, `${baseName}-${size}.webp`));
+      console.log(`✓ ${file} done!`);
     }
 
-    console.log(`✓ ${file} done!`);
+    console.log("\nAll images processed!");
+    console.log("Generated sizes:", sizes.join(", "));
   }
 
-  console.log("\nAll images processed!");
-  console.log("\nGenerated sizes:", sizes.join(", "));
+  cleanOrphans(inputBaseNames);
 }
 
 // Run it
