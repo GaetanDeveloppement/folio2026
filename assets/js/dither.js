@@ -16,8 +16,13 @@ const HOVER_SPREAD_SCALE = 1.6;
 const EASE_SPLIT = 0.2;
 const EASING_POWER = 3;
 // Hover circle (cursor-following reveal mask, single physical disk that bleeds across canvases)
-const HOVER_CIRCLE_RADIUS_PX = 900; // radius in CSS pixels — same physical size on every image
-const HOVER_CIRCLE_FALLOFF = 0.9; // soft-edge width as fraction of radius (0 = hard edge, 1 = fully soft)
+const HOVER_CIRCLE_RADIUS_PX = 400; // radius in CSS pixels — same physical size on every image
+const HOVER_CIRCLE_FALLOFF = 0.95; // width of the dithered band as fraction of radius (0 = hard edge, 1 = dither covers the whole disk)
+const HOVER_CIRCLE_PULSE = 0.25; // radius pulse amplitude as fraction of radius (0 = no pulse)
+const HOVER_CIRCLE_PULSE_HZ = 0.1; // pulse frequency in Hz
+// Click circle — sharper second disk that grows from the cursor on click
+const CLICK_CIRCLE_FALLOFF = 0.15; // dither band width as fraction of radius — keep small for a hard, distinct edge
+const HOVER_CLICK_GROW_DURATION = 1000; // duration of the click-grow animation (ms)
 
 function getPixelSize() {
   return window.innerWidth <= BREAKPOINT_MOBILE
@@ -83,6 +88,8 @@ function buildFrag(pixelSize) {
     uniform float     u_light;
     uniform vec2      u_mouse;
     uniform float     u_radius;
+    uniform float     u_clickRadius;
+    uniform float     u_time;
 
     varying vec2 v_uv;
 
@@ -141,14 +148,28 @@ function buildFrag(pixelSize) {
             result = mix(result, bgColor, mask);
         }
 
-        float aspect       = u_resolution.x / u_resolution.y;
-        vec2  circleDelta  = (v_uv - u_mouse) * vec2(aspect, 1.0);
-        float circleDist   = length(circleDelta);
-        float safeRadius   = max(u_radius, 0.0001);
-        float falloffStart = safeRadius * (1.0 - ${HOVER_CIRCLE_FALLOFF});
-        float circleMask   = (u_radius > 0.0)
-            ? (1.0 - smoothstep(falloffStart, safeRadius, circleDist))
+        float aspect        = u_resolution.x / u_resolution.y;
+        vec2  circleDelta   = (v_uv - u_mouse) * vec2(aspect, 1.0);
+        float circleDist    = length(circleDelta);
+
+        // Hover circle: soft, pulsing, follows cursor.
+        float pulse         = 1.0 + ${HOVER_CIRCLE_PULSE.toFixed(4)} * sin(u_time * ${HOVER_CIRCLE_PULSE_HZ.toFixed(4)} * 6.28318);
+        float pulsedRadius  = max(u_radius * pulse, 0.0001);
+        float hoverNorm     = circleDist / pulsedRadius;
+        float hoverMin      = 1.0 - ${HOVER_CIRCLE_FALLOFF};
+        float hoverCircle   = (u_radius > 0.0)
+            ? step(hoverNorm, mix(hoverMin, 1.0, t))
             : 0.0;
+
+        // Click circle: sharper second disk that grows from the cursor on click.
+        float clickRad      = max(u_clickRadius, 0.0001);
+        float clickNorm     = circleDist / clickRad;
+        float clickMin      = 1.0 - ${CLICK_CIRCLE_FALLOFF};
+        float clickCircle   = (u_clickRadius > 0.0)
+            ? step(clickNorm, mix(clickMin, 1.0, t))
+            : 0.0;
+
+        float circleMask    = max(hoverCircle, clickCircle);
 
         float effectiveHover = u_hover * circleMask;
         float hoverSpread = ${HOVER_SPREAD_SCALE} * effectiveHover * (1.0 - effectiveHover);
@@ -171,6 +192,10 @@ function easeAsymmetric(p, split, power) {
 
 function easeOut(p) {
   return 1.0 - Math.pow(1.0 - p, EASING_POWER);
+}
+
+function linear(p) {
+  return p;
 }
 
 function makeBayerMatrix(n) {
@@ -298,10 +323,12 @@ class DitherCanvas {
     this.hover = 0.0;
     this.mouse = [0.5, 0.5];
     this.radius = 0.0;
+    this.clickRadius = 0.0;
     this._rafId = null;
     this._dissolveRafId = null;
     this._pollRafId = null;
     this._radiusRafId = null;
+    this._clickRadiusRafId = null;
     this._hoverActive = false;
     this._pointerOver = false;
     this._hoverStart = null;
@@ -357,16 +384,12 @@ class DitherCanvas {
         }
 
         if (inRange) {
-          if (
-            nx !== self.mouse[0] ||
-            ny !== self.mouse[1] ||
-            radiusH !== self.radius
-          ) {
-            self.mouse[0] = nx;
-            self.mouse[1] = ny;
-            self.radius = radiusH;
-            self.render();
-          }
+          self.mouse[0] = nx;
+          self.mouse[1] = ny;
+          self.radius = radiusH;
+          // Render every frame so the pulse animates (and dither edge updates)
+          // even when the cursor is still.
+          self.render();
         }
 
         self._pollRafId = requestAnimationFrame(pollHover);
@@ -477,6 +500,8 @@ class DitherCanvas {
       light: gl.getUniformLocation(prog, "u_light"),
       mouse: gl.getUniformLocation(prog, "u_mouse"),
       radius: gl.getUniformLocation(prog, "u_radius"),
+      clickRadius: gl.getUniformLocation(prog, "u_clickRadius"),
+      time: gl.getUniformLocation(prog, "u_time"),
     };
 
     this.bayerTex = this._makeTex(
@@ -632,18 +657,24 @@ class DitherCanvas {
   growCircleAndCover(duration) {
     cancelAnimationFrame(this._pollRafId);
     cancelAnimationFrame(this._rafId);
+    cancelAnimationFrame(this._clickRadiusRafId);
     this.hover = 1.0;
+    this.clickRadius = 0.0;
     const aspect = this.canvas.width / this.canvas.height;
     const dx = Math.max(this.mouse[0], 1 - this.mouse[0]) * aspect;
     const dy = Math.max(this.mouse[1], 1 - this.mouse[1]);
     const maxDist = Math.sqrt(dx * dx + dy * dy);
-    // The shader's inner fully-revealed zone is radius * (1 - falloff). For
-    // the whole canvas to be fully revealed we need that inner edge to reach
-    // past the farthest corner — otherwise the corners only land in the soft
-    // falloff zone and look partially revealed.
-    const innerFraction = Math.max(1 - HOVER_CIRCLE_FALLOFF, 0.01);
+    // Click circle's inner fully-revealed zone is clickRadius * (1 - clickFalloff).
+    const innerFraction = Math.max(1 - CLICK_CIRCLE_FALLOFF, 0.01);
     const target = (maxDist / innerFraction) * 1.05;
-    return this._tween("radius", target, duration, "_radiusRafId", easeOut);
+    // Linear so the visible reveal lasts the full duration.
+    return this._tween(
+      "clickRadius",
+      target,
+      duration,
+      "_clickRadiusRafId",
+      linear,
+    );
   }
 
   dissolveFromBlack(duration) {
@@ -685,6 +716,8 @@ class DitherCanvas {
     gl.uniform1f(this.u.light, _lightMode ? 1.0 : 0.0);
     gl.uniform2f(this.u.mouse, this.mouse[0], this.mouse[1]);
     gl.uniform1f(this.u.radius, this.radius);
+    gl.uniform1f(this.u.clickRadius, this.clickRadius);
+    gl.uniform1f(this.u.time, (performance.now() / 1000) % 1000);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
@@ -694,6 +727,7 @@ class DitherCanvas {
     cancelAnimationFrame(this._dissolveRafId);
     cancelAnimationFrame(this._pollRafId);
     cancelAnimationFrame(this._radiusRafId);
+    cancelAnimationFrame(this._clickRadiusRafId);
 
     if (this.ro) {
       this.ro.disconnect();
@@ -776,7 +810,7 @@ function destroyAllDither() {
   }
 }
 
-function dissolveAllToBlack(duration) {
+function dissolveAllToBlack() {
   if (ditherInstances.length === 0) {
     return Promise.resolve();
   }
@@ -787,12 +821,12 @@ function dissolveAllToBlack(duration) {
         return !dc._pointerOver;
       })
       .map(function (dc) {
-        return dc.dissolveToBlack(duration);
+        return dc.dissolveToBlack(HOVER_CLICK_GROW_DURATION);
       }),
   );
 }
 
-function growHoveredCircles(duration) {
+function growHoveredCircles() {
   if (ditherInstances.length === 0) {
     return Promise.resolve();
   }
@@ -803,7 +837,7 @@ function growHoveredCircles(duration) {
         return dc._pointerOver;
       })
       .map(function (dc) {
-        return dc.growCircleAndCover(duration);
+        return dc.growCircleAndCover(HOVER_CLICK_GROW_DURATION);
       }),
   );
 }

@@ -1,4 +1,3 @@
-const DISSOLVE_DURATION = 700;
 const REVEAL_STAGGER_DELAY = 80;
 const REVEAL_INITIAL_DELAY = 100;
 const FETCH_TIMEOUT = 8000;
@@ -133,8 +132,8 @@ function performTransition(href, pushToHistory) {
     unrevealTextElements();
 
     Promise.all([
-        window.dissolveAllToBlack(DISSOLVE_DURATION),
-        window.growHoveredCircles(DISSOLVE_DURATION),
+        window.dissolveAllToBlack(),
+        window.growHoveredCircles(),
     ])
         .then(function () {
             return fetchPromise;
