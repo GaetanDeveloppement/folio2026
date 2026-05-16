@@ -17,7 +17,7 @@ const EASE_SPLIT = 0.2;
 const EASING_POWER = 3;
 // Hover circle (cursor-following reveal mask, single physical disk that bleeds across canvases)
 const HOVER_CIRCLE_RADIUS_PX = 400; // radius in CSS pixels — same physical size on every image
-const HOVER_CIRCLE_FALLOFF = 0.95; // width of the dithered band as fraction of radius (0 = hard edge, 1 = dither covers the whole disk)
+const HOVER_CIRCLE_FALLOFF = 0.9; // width of the dithered band as fraction of radius (0 = hard edge, 1 = dither covers the whole disk)
 const HOVER_CIRCLE_PULSE = 0.25; // radius pulse amplitude as fraction of radius (0 = no pulse)
 const HOVER_CIRCLE_PULSE_HZ = 0.1; // pulse frequency in Hz
 // Click circle — sharper second disk that grows from the cursor on click
