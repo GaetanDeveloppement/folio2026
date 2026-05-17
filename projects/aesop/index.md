@@ -1,11 +1,13 @@
 ---
 layout: app
-title: "gaëtan jestin - Aesop"
+title: "Aesop"
 project_title: "Aesop — r&d"
 page_layout: project
+username: "gaëtan jestin"
+year: "2025"
 ---
 
-# Aesop
-*3d r&d*
+R&D pour la gamme de parfums Heremia Aesop. Still préparatifs à un motion design complet.
 
-This is new text now...
+|  <em>livrables</em>  |  motion design <br/> direction artistique 3D  |
+|  <em>status</em>  |  travail en cours  |
