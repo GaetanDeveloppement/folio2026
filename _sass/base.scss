@@ -110,6 +110,11 @@ main {
 // Sidebar (left half: cols 1–4)
 // =============================================================================
 
+body[data-layout="home"] .sidebar header h1 {
+    cursor: pointer;
+    user-select: none;
+}
+
 .sidebar {
     grid-column: 1 / 5;
     height: 100svh;

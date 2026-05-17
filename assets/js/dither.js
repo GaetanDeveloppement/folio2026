@@ -23,6 +23,10 @@ const HOVER_CIRCLE_PULSE_HZ = 0.1; // pulse frequency in Hz
 // Click circle — sharper second disk that grows from the cursor on click
 const CLICK_CIRCLE_FALLOFF = 0.15; // dither band width as fraction of radius — keep small for a hard, distinct edge
 const HOVER_CLICK_GROW_DURATION = 1000; // duration of the click-grow animation (ms)
+// Pixel sort — vertical luminance sort triggered by clicking the title
+// One odd-even pass per frame, n passes guarantees an n-tall column is sorted.
+const SORTED_MAX_SIZE = 384;
+const SORT_RESET_DURATION = 600;
 
 function getPixelSize() {
   return window.innerWidth <= BREAKPOINT_MOBILE
@@ -79,6 +83,7 @@ function buildFrag(pixelSize) {
     precision mediump float;
 
     uniform sampler2D u_image;
+    uniform sampler2D u_sorted;
     uniform sampler2D u_bayer;
     uniform sampler2D u_palette;
     uniform vec2      u_resolution;
@@ -86,6 +91,7 @@ function buildFrag(pixelSize) {
     uniform float     u_hover;
     uniform float     u_reveal;
     uniform float     u_light;
+    uniform float     u_sort;
     uniform vec2      u_mouse;
     uniform float     u_radius;
     uniform float     u_clickRadius;
@@ -106,12 +112,16 @@ function buildFrag(pixelSize) {
         vec2 pixelCoord = floor(v_uv * u_resolution / ${pixelSize}.0) * ${pixelSize}.0;
         vec2 blockUV    = (pixelCoord + ${pixelSize}.0 * 0.5) / u_resolution;
 
-        vec3  col = texture2D(u_image, blockUV).rgb;
-        float lum = dot(col, vec3(0.299, 0.587, 0.114));
-
         vec2  blockPx = floor(v_uv * u_resolution / ${pixelSize}.0);
         vec2  bayerUV = mod(blockPx, ${BAYER_SIZE}.0) / ${BAYER_SIZE}.0;
         float t       = texture2D(u_bayer, bayerUV).r;
+
+        vec3  origCol   = texture2D(u_image, blockUV).rgb;
+        vec3  sortedCol = texture2D(u_sorted, blockUV).rgb;
+        // Wave from top to bottom so sorted pixels appear to "fall" into place.
+        float sortProgress = clamp(u_sort * 1.5 - v_uv.y * 0.5, 0.0, 1.0);
+        vec3  col = (t < sortProgress) ? sortedCol : origCol;
+        float lum = dot(col, vec3(0.299, 0.587, 0.114));
 
         vec3 bw = mix(vec3(0.0, 0.0, 0.0), vec3(0.9, 0.9, 0.9), step(t, lum));
 
@@ -304,6 +314,38 @@ function extractPalette(img) {
   return selected;
 }
 
+const _sortDataCache = new Map();
+
+function loadImageData(img) {
+  const scale = Math.min(
+    1,
+    SORTED_MAX_SIZE / Math.max(img.naturalWidth, img.naturalHeight),
+  );
+  const w = Math.max(1, Math.round(img.naturalWidth * scale));
+  const h = Math.max(1, Math.round(img.naturalHeight * scale));
+
+  const off = document.createElement("canvas");
+  off.width = w;
+  off.height = h;
+  const ctx = off.getContext("2d");
+  ctx.drawImage(img, 0, 0, w, h);
+  const imageData = ctx.getImageData(0, 0, w, h);
+  return { data: new Uint8Array(imageData.data), width: w, height: h };
+}
+
+function getOrLoadSortData(img) {
+  if (!img.naturalWidth) {
+    return null;
+  }
+  const key = img.src;
+  let entry = _sortDataCache.get(key);
+  if (!entry) {
+    entry = loadImageData(img);
+    _sortDataCache.set(key, entry);
+  }
+  return entry;
+}
+
 class DitherCanvas {
   constructor(imgEl, skipReveal = false) {
     this.img = imgEl;
@@ -321,6 +363,7 @@ class DitherCanvas {
     this.isMobile = window.innerWidth <= BREAKPOINT_MOBILE;
     this.dissolve = 1.0;
     this.hover = 0.0;
+    this.sort = 0.0;
     this.mouse = [0.5, 0.5];
     this.radius = 0.0;
     this.clickRadius = 0.0;
@@ -329,6 +372,15 @@ class DitherCanvas {
     this._pollRafId = null;
     this._radiusRafId = null;
     this._clickRadiusRafId = null;
+    this._sortRafId = null;
+    this._sortAnimRafId = null;
+    this._sortIdleId = null;
+    this.sortBuffer = null;
+    this.sortLum = null;
+    this.sortW = 0;
+    this.sortH = 0;
+    this.sortIter = 0;
+    this.sortDone = false;
     this._hoverActive = false;
     this._pointerOver = false;
     this._hoverStart = null;
@@ -491,6 +543,7 @@ class DitherCanvas {
 
     this.u = {
       image: gl.getUniformLocation(prog, "u_image"),
+      sorted: gl.getUniformLocation(prog, "u_sorted"),
       bayer: gl.getUniformLocation(prog, "u_bayer"),
       palette: gl.getUniformLocation(prog, "u_palette"),
       resolution: gl.getUniformLocation(prog, "u_resolution"),
@@ -498,6 +551,7 @@ class DitherCanvas {
       hover: gl.getUniformLocation(prog, "u_hover"),
       reveal: gl.getUniformLocation(prog, "u_reveal"),
       light: gl.getUniformLocation(prog, "u_light"),
+      sort: gl.getUniformLocation(prog, "u_sort"),
       mouse: gl.getUniformLocation(prog, "u_mouse"),
       radius: gl.getUniformLocation(prog, "u_radius"),
       clickRadius: gl.getUniformLocation(prog, "u_clickRadius"),
@@ -519,6 +573,25 @@ class DitherCanvas {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+    this.sortedTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.sortedTex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    // NEAREST so the user sees crisp per-pixel swaps, not a blur across columns.
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      1,
+      1,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      new Uint8Array([0, 0, 0, 255]),
+    );
   }
 
   _makeTex(data, size, format, wrap) {
@@ -581,6 +654,149 @@ class DitherCanvas {
     );
 
     this.textureReady = true;
+
+    const self = this;
+    const scheduleIdle =
+      window.requestIdleCallback ||
+      function (cb) {
+        return setTimeout(cb, 200);
+      };
+    this._sortIdleId = scheduleIdle(function () {
+      self._sortIdleId = null;
+      // Warm the per-src image-data cache so the first click doesn't hitch.
+      getOrLoadSortData(self.img);
+    });
+  }
+
+  _uploadSortedTex() {
+    if (!this.gl || !this.sortBuffer) {
+      return;
+    }
+    const gl = this.gl;
+    gl.bindTexture(gl.TEXTURE_2D, this.sortedTex);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      this.sortW,
+      this.sortH,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      this.sortBuffer,
+    );
+  }
+
+  // One odd-even (brick) sort pass per column. Alternates between comparing
+  // even/odd pairs each iteration; n iterations guarantees a fully-sorted
+  // column of length n.
+  _runSortPass() {
+    const data = this.sortBuffer;
+    const lum = this.sortLum;
+    const w = this.sortW;
+    const h = this.sortH;
+    const startY = this.sortIter % 2;
+
+    for (let x = 0; x < w; x++) {
+      for (let y = startY; y < h - 1; y += 2) {
+        const li1 = y * w + x;
+        const li2 = li1 + w;
+        if (lum[li1] > lum[li2]) {
+          const tl = lum[li1];
+          lum[li1] = lum[li2];
+          lum[li2] = tl;
+          const i1 = li1 * 4;
+          const i2 = li2 * 4;
+          const r = data[i1];
+          const g = data[i1 + 1];
+          const b = data[i1 + 2];
+          const a = data[i1 + 3];
+          data[i1] = data[i2];
+          data[i1 + 1] = data[i2 + 1];
+          data[i1 + 2] = data[i2 + 2];
+          data[i1 + 3] = data[i2 + 3];
+          data[i2] = r;
+          data[i2 + 1] = g;
+          data[i2 + 2] = b;
+          data[i2 + 3] = a;
+        }
+      }
+    }
+
+    this.sortIter++;
+    if (this.sortIter >= h) {
+      this.sortDone = true;
+    }
+  }
+
+  startSort() {
+    if (!this.gl) {
+      return;
+    }
+    cancelAnimationFrame(this._sortAnimRafId);
+    cancelAnimationFrame(this._sortRafId);
+    this._sortAnimRafId = null;
+    this._sortRafId = null;
+
+    const cached = getOrLoadSortData(this.img);
+    if (!cached) {
+      return;
+    }
+
+    this.sortW = cached.width;
+    this.sortH = cached.height;
+    this.sortBuffer = new Uint8Array(cached.data);
+    const n = this.sortW * this.sortH;
+    this.sortLum = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const j = i * 4;
+      this.sortLum[i] =
+        this.sortBuffer[j] * 0.299 +
+        this.sortBuffer[j + 1] * 0.587 +
+        this.sortBuffer[j + 2] * 0.114;
+    }
+    this.sortIter = 0;
+    this.sortDone = false;
+    this._uploadSortedTex();
+    this.sort = 1.0;
+    this.render();
+
+    const self = this;
+    function tick() {
+      if (!self.gl || !self.sortBuffer) {
+        self._sortAnimRafId = null;
+        return;
+      }
+      self._runSortPass();
+      self._uploadSortedTex();
+      self.render();
+      if (self.sortDone) {
+        self._sortAnimRafId = null;
+      } else {
+        self._sortAnimRafId = requestAnimationFrame(tick);
+      }
+    }
+    self._sortAnimRafId = requestAnimationFrame(tick);
+  }
+
+  resetSort() {
+    cancelAnimationFrame(this._sortAnimRafId);
+    this._sortAnimRafId = null;
+    if (!this.gl) {
+      return Promise.resolve();
+    }
+    const self = this;
+    return this._tween(
+      "sort",
+      0,
+      SORT_RESET_DURATION,
+      "_sortRafId",
+      easeOut,
+    ).then(function () {
+      self.sortBuffer = null;
+      self.sortLum = null;
+      self.sortDone = false;
+    });
   }
 
   _resize() {
@@ -710,10 +926,15 @@ class DitherCanvas {
     gl.bindTexture(gl.TEXTURE_2D, this.paletteTex);
     gl.uniform1i(this.u.palette, 2);
 
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, this.sortedTex);
+    gl.uniform1i(this.u.sorted, 3);
+
     gl.uniform1f(this.u.dissolve, this.dissolve);
     gl.uniform1f(this.u.hover, this.hover);
     gl.uniform1f(this.u.reveal, this.revealOnly ? 1.0 : 0.0);
     gl.uniform1f(this.u.light, _lightMode ? 1.0 : 0.0);
+    gl.uniform1f(this.u.sort, this.sort);
     gl.uniform2f(this.u.mouse, this.mouse[0], this.mouse[1]);
     gl.uniform1f(this.u.radius, this.radius);
     gl.uniform1f(this.u.clickRadius, this.clickRadius);
@@ -728,6 +949,13 @@ class DitherCanvas {
     cancelAnimationFrame(this._pollRafId);
     cancelAnimationFrame(this._radiusRafId);
     cancelAnimationFrame(this._clickRadiusRafId);
+    cancelAnimationFrame(this._sortRafId);
+    cancelAnimationFrame(this._sortAnimRafId);
+    if (this._sortIdleId !== null && window.cancelIdleCallback) {
+      window.cancelIdleCallback(this._sortIdleId);
+    }
+    this.sortBuffer = null;
+    this.sortLum = null;
 
     if (this.ro) {
       this.ro.disconnect();
@@ -737,6 +965,9 @@ class DitherCanvas {
       const gl = this.gl;
       if (this.imgTex) {
         gl.deleteTexture(this.imgTex);
+      }
+      if (this.sortedTex) {
+        gl.deleteTexture(this.sortedTex);
       }
       if (this.bayerTex) {
         gl.deleteTexture(this.bayerTex);
@@ -774,6 +1005,23 @@ class DitherCanvas {
 
 const ditherInstances = [];
 window._ditherInstances = ditherInstances;
+
+function togglePixelSort() {
+  const someActive = ditherInstances.some(function (dc) {
+    return dc.sort > 0 || dc._sortAnimRafId !== null;
+  });
+  if (someActive) {
+    ditherInstances.forEach(function (dc) {
+      dc.resetSort();
+    });
+  } else {
+    ditherInstances.forEach(function (dc) {
+      if (!dc.revealOnly) {
+        dc.startSort();
+      }
+    });
+  }
+}
 
 function initDither(root) {
   if (!root) {
@@ -858,6 +1106,17 @@ document.addEventListener("DOMContentLoaded", function () {
   initDither();
 });
 
+document.addEventListener("click", function (e) {
+  if (document.body.dataset.layout !== "home") {
+    return;
+  }
+  const h1 = e.target.closest(".sidebar header h1");
+  if (!h1 || h1.querySelector("a")) {
+    return;
+  }
+  togglePixelSort();
+});
+
 window.addEventListener("ditherInitClone", function (e) {
   initDither(e.detail);
 });
@@ -867,6 +1126,7 @@ window.destroyAllDither = destroyAllDither;
 window.dissolveAllToBlack = dissolveAllToBlack;
 window.dissolveAllFromBlack = dissolveAllFromBlack;
 window.growHoveredCircles = growHoveredCircles;
+window.togglePixelSort = togglePixelSort;
 window.getMaxHoverRemaining = function () {
   return ditherInstances.reduce(function (max, dc) {
     return Math.max(max, dc.hoverRemaining());
