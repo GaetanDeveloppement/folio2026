@@ -61,12 +61,22 @@ body {
     background: var(--background);
     color: var(--text-hc);
     font-family: $body-font;
+
+    @media (max-width: $breakpoint-mobile) {
+        --scale-image: 1;
+        height: auto;
+        overflow: visible;
+    }
 }
 
 h1,
 p,
 a {
     font-size: 20px;
+
+    @media (max-width: $breakpoint-mobile) {
+        font-size: 16px;
+    }
 }
 
 a {
@@ -92,9 +102,10 @@ main {
     padding: 0 var(--grid-gutter);
 
     @media (max-width: $breakpoint-mobile) {
-        grid-template-columns: auto;
-        grid-template-rows: 35svh 65svh;
-        gap: 0;
+        height: auto;
+        overflow: visible;
+        grid-template-columns: 1fr;
+        row-gap: $spacing-lg;
         padding: $spacing-sm;
     }
 }
@@ -120,6 +131,11 @@ main {
         display: grid;
         grid-template-columns: repeat(3, var(--grid-column));
         column-gap: var(--grid-gutter);
+
+        @media (max-width: $breakpoint-mobile) {
+            grid-template-columns: 1fr;
+            gap: $spacing-xs;
+        }
     }
 
     .bio {
@@ -134,6 +150,15 @@ main {
 
             > *:nth-child(2) {
                 grid-column: 2 / 4;
+            }
+
+            @media (max-width: $breakpoint-mobile) {
+                grid-template-columns: 1fr;
+                gap: $spacing-xs;
+
+                > *:nth-child(2) {
+                    grid-column: auto;
+                }
             }
         }
     }
@@ -166,6 +191,24 @@ main {
                 margin-bottom: 40px;
             }
         }
+
+        @media (max-width: $breakpoint-mobile) {
+            grid-template-columns: 1fr;
+
+            > p {
+                grid-column: auto;
+            }
+
+            table {
+                grid-column: auto;
+                margin-top: $spacing-lg;
+
+                tbody tr {
+                    grid-template-columns: 1fr 2fr;
+                    margin-bottom: $spacing-md;
+                }
+            }
+        }
     }
 }
 
@@ -180,6 +223,7 @@ main {
 
     @media (max-width: $breakpoint-mobile) {
         grid-column: auto;
+        overflow: visible;
     }
 }
 
@@ -196,6 +240,15 @@ main {
     #clone {
         height: 100svh;
         overflow: hidden;
+    }
+
+    @media (max-width: $breakpoint-mobile) {
+        overflow: visible;
+        height: auto;
+
+        #clone {
+            display: none;
+        }
     }
 }
 

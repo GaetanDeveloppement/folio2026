@@ -2,6 +2,11 @@ const PARALLAX_SCALE_DEFAULT = 1;
 const UPDATE_THRESHOLD = 0.5;
 const SCROLL_POSITION_KEY = "carousel-scroll-position";
 const TRANSITION_ITEM_TOP_KEY = "transition-item-top";
+const BREAKPOINT_MOBILE = 768;
+
+function isMobileViewport() {
+  return window.innerWidth <= BREAKPOINT_MOBILE;
+}
 
 let images = [];
 let observers = [];
@@ -19,6 +24,10 @@ function initScroll() {
   images = [];
   observers = [];
   lastOffsets = new Map();
+
+  if (isMobileViewport()) {
+    return;
+  }
 
   const scale =
     parseFloat(
