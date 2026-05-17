@@ -26,7 +26,10 @@ const HOVER_CLICK_GROW_DURATION = 1000; // duration of the click-grow animation 
 // Pixel sort — vertical luminance sort triggered by clicking the title
 // One odd-even pass per frame, n passes guarantees an n-tall column is sorted.
 const SORTED_MAX_SIZE = 384;
+const SORT_START_DURATION = 600;
 const SORT_RESET_DURATION = 600;
+const SORT_SCALE_TWEEN_DURATION = 500;
+const SORT_ACTIVE_SCALE = 1;
 
 function getPixelSize() {
   return window.innerWidth <= BREAKPOINT_MOBILE
@@ -139,6 +142,9 @@ function buildFrag(pixelSize) {
 
         float total = d0 + d1;
         float ratio = (total > 0.0) ? (1.0 - d0 / total) : 0.0;
+        // Bias toward c0 (nearest palette color) as the sort engages, so the
+        // sorted state renders as flat color bands instead of stippled noise.
+        ratio = mix(ratio, 1.0, u_sort);
         vec3 color = (t < ratio) ? c0 : c1;
 
         vec2  dissolvePx = floor(v_uv * u_resolution / (${pixelSize}.0 * 2.0));
@@ -344,6 +350,37 @@ function getOrLoadSortData(img) {
     _sortDataCache.set(key, entry);
   }
   return entry;
+}
+
+function ensurePaletteIdx(cached, palette) {
+  if (cached.paletteIdx || !palette || palette.length === 0) {
+    return cached.paletteIdx || null;
+  }
+  const n = cached.width * cached.height;
+  const idx = new Uint8Array(n);
+  const data = cached.data;
+  for (let i = 0; i < n; i++) {
+    const j = i * 4;
+    const r = data[j];
+    const g = data[j + 1];
+    const b = data[j + 2];
+    let bestD = Infinity;
+    let bestIdx = 0;
+    for (let k = 0; k < palette.length; k++) {
+      const p = palette[k];
+      const dr = r - p.r;
+      const dg = g - p.g;
+      const db = b - p.b;
+      const d = dr * dr * 0.299 + dg * dg * 0.587 + db * db * 0.114;
+      if (d < bestD) {
+        bestD = d;
+        bestIdx = k;
+      }
+    }
+    idx[i] = bestIdx;
+  }
+  cached.paletteIdx = idx;
+  return idx;
 }
 
 class DitherCanvas {
@@ -653,6 +690,13 @@ class DitherCanvas {
       palData,
     );
 
+    this.palette = palette;
+    this.paletteLum = new Float32Array(palette.length);
+    for (let k = 0; k < palette.length; k++) {
+      this.paletteLum[k] =
+        palette[k].r * 0.299 + palette[k].g * 0.587 + palette[k].b * 0.114;
+    }
+
     this.textureReady = true;
 
     const self = this;
@@ -663,8 +707,12 @@ class DitherCanvas {
       };
     this._sortIdleId = scheduleIdle(function () {
       self._sortIdleId = null;
-      // Warm the per-src image-data cache so the first click doesn't hitch.
-      getOrLoadSortData(self.img);
+      // Warm cache: image data + per-pixel palette-index lookup so the
+      // first click doesn't hitch.
+      const cached = getOrLoadSortData(self.img);
+      if (cached) {
+        ensurePaletteIdx(cached, self.palette);
+      }
     });
   }
 
@@ -748,18 +796,39 @@ class DitherCanvas {
     this.sortBuffer = new Uint8Array(cached.data);
     const n = this.sortW * this.sortH;
     this.sortLum = new Float32Array(n);
-    for (let i = 0; i < n; i++) {
-      const j = i * 4;
-      this.sortLum[i] =
-        this.sortBuffer[j] * 0.299 +
-        this.sortBuffer[j + 1] * 0.587 +
-        this.sortBuffer[j + 2] * 0.114;
+
+    // Sort key: palette-color luminance (primary) + raw luminance (secondary).
+    // This groups pixels mapping to the same palette color into a single
+    // band, ordered darkest palette → lightest, then darkest raw → lightest
+    // within each band.
+    const palIdx = ensurePaletteIdx(cached, this.palette);
+    const paletteLum = this.paletteLum;
+    if (palIdx && paletteLum) {
+      for (let i = 0; i < n; i++) {
+        const j = i * 4;
+        const rawLum =
+          this.sortBuffer[j] * 0.299 +
+          this.sortBuffer[j + 1] * 0.587 +
+          this.sortBuffer[j + 2] * 0.114;
+        this.sortLum[i] = paletteLum[palIdx[i]] * 1000 + rawLum;
+      }
+    } else {
+      for (let i = 0; i < n; i++) {
+        const j = i * 4;
+        this.sortLum[i] =
+          this.sortBuffer[j] * 0.299 +
+          this.sortBuffer[j + 1] * 0.587 +
+          this.sortBuffer[j + 2] * 0.114;
+      }
     }
+
     this.sortIter = 0;
     this.sortDone = false;
     this._uploadSortedTex();
-    this.sort = 1.0;
     this.render();
+    // Smoothly tween the sort uniform up so the dither→flat transition is
+    // a soft fade instead of a snap.
+    this._tween("sort", 1, SORT_START_DURATION, "_sortRafId", easeOut);
 
     const self = this;
     function tick() {
@@ -1006,15 +1075,42 @@ class DitherCanvas {
 const ditherInstances = [];
 window._ditherInstances = ditherInstances;
 
+let _defaultScale = null;
+
+function captureDefaultScale() {
+  // Read once, before any inline override exists, so we know what to tween back to.
+  if (_defaultScale === null) {
+    const inline = document.body.style.getPropertyValue("--scale-image");
+    if (inline) {
+      document.body.style.removeProperty("--scale-image");
+    }
+    _defaultScale =
+      parseFloat(
+        getComputedStyle(document.body).getPropertyValue("--scale-image"),
+      ) || 1;
+    if (inline) {
+      document.body.style.setProperty("--scale-image", inline);
+    }
+  }
+  return _defaultScale;
+}
+
 function togglePixelSort() {
+  const defaultScale = captureDefaultScale();
   const someActive = ditherInstances.some(function (dc) {
     return dc.sort > 0 || dc._sortAnimRafId !== null;
   });
   if (someActive) {
+    if (window.tweenParallaxScale) {
+      window.tweenParallaxScale(defaultScale, SORT_SCALE_TWEEN_DURATION);
+    }
     ditherInstances.forEach(function (dc) {
       dc.resetSort();
     });
   } else {
+    if (window.tweenParallaxScale) {
+      window.tweenParallaxScale(SORT_ACTIVE_SCALE, SORT_SCALE_TWEEN_DURATION);
+    }
     ditherInstances.forEach(function (dc) {
       if (!dc.revealOnly) {
         dc.startSort();
@@ -1052,6 +1148,10 @@ function initDither(root) {
 }
 
 function destroyAllDither() {
+  if (window.cancelParallaxScaleTween) {
+    window.cancelParallaxScaleTween();
+  }
+  document.body.style.removeProperty("--scale-image");
   while (ditherInstances.length > 0) {
     const instance = ditherInstances[0];
     instance.destroy();

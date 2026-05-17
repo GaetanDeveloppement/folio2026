@@ -15,6 +15,15 @@ let rafId = null;
 let lastOffsets = new Map();
 let items = [];
 let scrollContainerHeight = 0;
+let currentScale = PARALLAX_SCALE_DEFAULT;
+
+function readScale() {
+  return (
+    parseFloat(
+      getComputedStyle(document.body).getPropertyValue("--scale-image"),
+    ) || PARALLAX_SCALE_DEFAULT
+  );
+}
 
 function getIsProjectPage() {
   return document.body.dataset.layout === "project";
@@ -29,10 +38,7 @@ function initScroll() {
     return;
   }
 
-  const scale =
-    parseFloat(
-      getComputedStyle(document.body).getPropertyValue("--scale-image"),
-    ) || PARALLAX_SCALE_DEFAULT;
+  currentScale = readScale();
   scrollContainerHeight = document.body.clientHeight;
   const imageElements = document.querySelectorAll(
     "#scroller .parallax:not(canvas)",
@@ -41,18 +47,18 @@ function initScroll() {
 
   imageElements.forEach(function (item, index) {
     const parent = item.parentNode.parentNode;
-    let imageHeight = item.offsetHeight * scale;
+    let imageHeight = item.offsetHeight * currentScale;
     let containerHeight = parent.offsetHeight;
-    let gap = (imageHeight - containerHeight) / scale;
+    let gap = (imageHeight - containerHeight) / currentScale;
 
     item.dataset.index = index;
     images.push({ containerHeight, gap });
 
     const observer = new ResizeObserver(function (entries) {
       const entry = entries[0];
-      imageHeight = entry.target.offsetHeight * scale;
+      imageHeight = entry.target.offsetHeight * currentScale;
       containerHeight = parent.offsetHeight;
-      gap = (imageHeight - containerHeight) / scale;
+      gap = (imageHeight - containerHeight) / currentScale;
       images[index] = { containerHeight, gap };
     });
 
@@ -192,6 +198,66 @@ function destroyScroll() {
   lastOffsets = new Map();
 }
 
+function recomputeAllGaps() {
+  const elements = document.querySelectorAll(
+    "#scroller .parallax:not(canvas), #clone .parallax:not(canvas)",
+  );
+  elements.forEach(function (item) {
+    const idx = parseInt(item.dataset.index, 10);
+    if (isNaN(idx) || !images[idx]) {
+      return;
+    }
+    const parent = item.parentNode.parentNode;
+    const imageHeight = item.offsetHeight * currentScale;
+    const containerHeight = parent.offsetHeight;
+    const gap = (imageHeight - containerHeight) / currentScale;
+    images[idx] = { containerHeight, gap };
+  });
+}
+
+function refreshParallaxScale() {
+  if (isMobileViewport()) {
+    return;
+  }
+  currentScale = readScale();
+  recomputeAllGaps();
+}
+
+let _scaleTweenRafId = null;
+
+function cancelParallaxScaleTween() {
+  if (_scaleTweenRafId !== null) {
+    cancelAnimationFrame(_scaleTweenRafId);
+    _scaleTweenRafId = null;
+  }
+}
+
+function tweenParallaxScale(target, duration) {
+  if (isMobileViewport()) {
+    return;
+  }
+  cancelParallaxScaleTween();
+  const from = readScale();
+  if (Math.abs(from - target) < 0.001) {
+    return;
+  }
+  const start = performance.now();
+  function tick(now) {
+    const t = Math.min((now - start) / duration, 1.0);
+    const eased = 1 - Math.pow(1 - t, 3);
+    const value = from + (target - from) * eased;
+    document.body.style.setProperty("--scale-image", String(value));
+    currentScale = value;
+    recomputeAllGaps();
+    if (t < 1) {
+      _scaleTweenRafId = requestAnimationFrame(tick);
+    } else {
+      _scaleTweenRafId = null;
+    }
+  }
+  _scaleTweenRafId = requestAnimationFrame(tick);
+}
+
 function saveScrollPosition() {
   if (!lenis) {
     return;
@@ -215,3 +281,6 @@ window.addEventListener("beforeunload", function () {
 window.initScroll = initScroll;
 window.destroyScroll = destroyScroll;
 window.saveScrollPosition = saveScrollPosition;
+window.refreshParallaxScale = refreshParallaxScale;
+window.tweenParallaxScale = tweenParallaxScale;
+window.cancelParallaxScaleTween = cancelParallaxScaleTween;
