@@ -12,3 +12,9 @@ exclude:
   - image-resizer/
   - CLAUDE.md
   - .idea/
+
+sass:
+  style: compressed
+
+plugins:
+  - jekyll-minifier

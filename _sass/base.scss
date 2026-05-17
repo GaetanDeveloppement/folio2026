@@ -1,9 +1,5 @@
 @use "grid" as *;
 
-// =============================================================================
-// Tokens
-// =============================================================================
-
 $body-font:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
@@ -19,10 +15,6 @@ $breakpoint-mobile: 1024px;
 $parallax-scale: 1.25;
 
 $reveal-ease: cubic-bezier(0.16, 1, 0.3, 1);
-
-// =============================================================================
-// Theme
-// =============================================================================
 
 :root {
     --background: #f3f7fb;
@@ -48,10 +40,6 @@ $reveal-ease: cubic-bezier(0.16, 1, 0.3, 1);
         --border: #302f2d;
     }
 }
-
-// =============================================================================
-// Base elements
-// =============================================================================
 
 body {
     --scale-image: #{$parallax-scale};
@@ -84,9 +72,7 @@ em {
     color: var(--text-md);
 }
 
-// =============================================================================
-// Page layout — 8-column grid: sidebar on the left, gallery on the right
-// =============================================================================
+// Page layout
 
 main {
     height: 100svh;
@@ -106,9 +92,7 @@ main {
     }
 }
 
-// =============================================================================
-// Sidebar (left half: cols 1–4)
-// =============================================================================
+// Sidebar
 
 body[data-layout="home"] .sidebar header h1 {
     cursor: pointer;
@@ -218,6 +202,7 @@ body[data-layout="home"] .sidebar header h1 {
             table {
                 grid-column: auto;
                 margin-top: $spacing-lg;
+                line-height: 150%;
 
                 tbody tr {
                     grid-template-columns: 1fr 2fr;
@@ -228,9 +213,7 @@ body[data-layout="home"] .sidebar header h1 {
     }
 }
 
-// =============================================================================
-// Gallery (right half: cols 5–8)
-// =============================================================================
+// Gallery
 
 .projects {
     grid-column: 5 / 9;
@@ -283,9 +266,7 @@ body[data-layout="home"] .sidebar header h1 {
     }
 }
 
-// =============================================================================
-// Image container + dither canvas overlay
-// =============================================================================
+// Image container
 
 .image-container {
     position: relative;
@@ -323,9 +304,7 @@ body[data-layout="home"] .sidebar header h1 {
     }
 }
 
-// =============================================================================
-// Reveal animation — staggered slide-in for text blocks
-// =============================================================================
+// Reveal animation
 
 .sidebar header > *:not(h1),
 .sidebar .bio > *,

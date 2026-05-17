@@ -16,14 +16,14 @@ const HOVER_SPREAD_SCALE = 1.6;
 const EASE_SPLIT = 0.2;
 const EASING_POWER = 3;
 // Hover circle (cursor-following reveal mask, single physical disk that bleeds across canvases)
-const HOVER_CIRCLE_RADIUS_PX = 400; // radius in CSS pixels — same physical size on every image
+const HOVER_CIRCLE_RADIUS_PX = 400; // radius in CSS pixels -- same physical size on every image
 const HOVER_CIRCLE_FALLOFF = 0.9; // width of the dithered band as fraction of radius (0 = hard edge, 1 = dither covers the whole disk)
 const HOVER_CIRCLE_PULSE = 0.25; // radius pulse amplitude as fraction of radius (0 = no pulse)
 const HOVER_CIRCLE_PULSE_HZ = 0.1; // pulse frequency in Hz
-// Click circle — sharper second disk that grows from the cursor on click
-const CLICK_CIRCLE_FALLOFF = 0.15; // dither band width as fraction of radius — keep small for a hard, distinct edge
+// Click circle -- sharper second disk that grows from the cursor on click
+const CLICK_CIRCLE_FALLOFF = 0.15; // dither band width as fraction of radius -- keep small for a hard, distinct edge
 const HOVER_CLICK_GROW_DURATION = 1000; // duration of the click-grow animation (ms)
-// Pixel sort — vertical luminance sort triggered by clicking the title
+// Pixel sort -- vertical luminance sort triggered by clicking the title
 // One odd-even pass per frame, n passes guarantees an n-tall column is sorted.
 const SORTED_MAX_SIZE = 384;
 const SORT_START_DURATION = 600;
@@ -799,7 +799,7 @@ class DitherCanvas {
 
     // Sort key: palette-color luminance (primary) + raw luminance (secondary).
     // This groups pixels mapping to the same palette color into a single
-    // band, ordered darkest palette → lightest, then darkest raw → lightest
+    // band, ordered darkest palette -> lightest, then darkest raw -> lightest
     // within each band.
     const palIdx = ensurePaletteIdx(cached, this.palette);
     const paletteLum = this.paletteLum;
@@ -826,7 +826,7 @@ class DitherCanvas {
     this.sortDone = false;
     this._uploadSortedTex();
     this.render();
-    // Smoothly tween the sort uniform up so the dither→flat transition is
+    // Smoothly tween the sort uniform up so the dither->flat transition is
     // a soft fade instead of a snap.
     this._tween("sort", 1, SORT_START_DURATION, "_sortRafId", easeOut);
 
