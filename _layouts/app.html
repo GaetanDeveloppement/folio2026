@@ -21,39 +21,77 @@
             type="image/png"
             href="{{ '/assets/image/favicon.png' | relative_url }}"
         />
-        <noscript
-            ><style>
+        <noscript>
+            <style>
                 .dither-wrap > picture > img {
                     visibility: visible;
                 }
-                .info > div:not(.socials) > *,
-                .info > .socials,
+                .sidebar header > *:not(h1),
+                .sidebar .bio > *,
+                .sidebar .details-container > *,
                 .project-item p {
                     clip-path: none;
                     transform: none;
                     opacity: 1;
                 }
-            </style></noscript
-        >
+            </style>
+        </noscript>
     </head>
 
     <body data-layout="{{ page.page_layout | default: 'home' }}">
         <main>
-            {% if page.page_layout == "project" %}
-            <div class="info">
-                <div>
-                    {{ content }}
-                    <a href="{{ '/' | relative_url }}" data-transition="true"
-                        >retour</a
-                    >
+            <div class="sidebar">
+                {% if page.page_layout == "project" %}
+                <header>
+                    <h1><a href="/">{{ page.username }}</a></h1>
+                    <p>{{ page.title }}</p>
+                    <p>{{ page.year }}</p>
+                </header>
+                <div class="details-container">{{ content }}</div>
+                {% else %}
+                <header>
+                    <h1>{{ page.username }}</h1>
+                    <p>{{ page.job }}</p>
+                    <p>{{ page.year }}</p>
+                </header>
+                <div class="bio">
+                    <div>
+                        <p>bio</p>
+                        <p>
+                            designer multidisciplinaire avant tout, je conçois
+                            des images de marque, des interfaces web, de la 3D,
+                            du motion design, du développement web, du webgl, de
+                            l'électronique…
+                        </p>
+                    </div>
+                    <div>
+                        <p>services</p>
+                        <p>brand identity, direction artistique</p>
+                    </div>
+                    <div>
+                        <p>contact</p>
+                        <a href="mailto:ecrire@gaetan.cool"
+                            >ecrire@gaetan.cool</a
+                        >
+                    </div>
+                    <div>
+                        <p>disponible</p>
+                        <p>juin 2026</p>
+                    </div>
+                    <div>
+                        <p>depuis</p>
+                        <p>bordeaux, paris</p>
+                    </div>
                 </div>
+                {% endif %}
             </div>
 
             <div class="projects">
                 <div id="wrapper" class="project-list">
                     <div id="scroller">
-                        {% assign project_data = site.data.projects | where:
-                        "title", page.project_title | first %} {% for image in
+                        {% if page.page_layout == "project" %} {% assign
+                        project_data = site.data.projects | where: "title",
+                        page.project_title | first %} {% for image in
                         project_data.images %}
                         <div class="project-item">
                             <div class="image-container dither-wrap">
@@ -62,28 +100,11 @@
                                 classes="parallax" %}
                             </div>
                         </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-            {% else %}
-            <div class="info">
-                <div>{{ content }}</div>
-                <div class="socials">
-                    <a href="{{ site.social.blog }}" target="_blank"> blog </a>
-                    <a href="{{ site.social.linkedin }}" target="_blank">
-                        linkedin
-                    </a>
-                </div>
-            </div>
-
-            <div class="projects">
-                <div id="wrapper" class="project-list">
-                    <div id="scroller">
-                        {% for project in site.data.projects %}
+                        {% endfor %} {% else %} {% for project in
+                        site.data.projects %}
                         <div class="project-item">
                             <a
-                                href="{{ '/' | append: 'projects/'  | append: project.page | relative_url }}"
+                                href="{{ '/' | append: 'projects/' | append: project.page | relative_url }}"
                             >
                                 <div class="image-container dither-wrap">
                                     {% include responsive-image.html
@@ -93,18 +114,24 @@
                                 <p>{{ project.title }}</p>
                             </a>
                         </div>
-                        {% endfor %}
+                        {% endfor %} {% endif %}
                     </div>
                 </div>
             </div>
-            {% endif %}
         </main>
 
         <script src="https://unpkg.com/lenis@1.3.15/dist/lenis.min.js"></script>
         <script type="importmap">
-            { "imports": { "ogl": "{{ '/assets/js/lib/ogl/index.js' | relative_url }}" } }
+            {
+                "imports": {
+                    "ogl": "{{ '/assets/js/lib/ogl/index.js' | relative_url }}"
+                }
+            }
         </script>
-        <script type="module" src="{{ '/assets/js/dither.js' | relative_url }}"></script>
+        <script
+            type="module"
+            src="{{ '/assets/js/dither.js' | relative_url }}"
+        ></script>
         <script src="{{ '/assets/js/index.js' | relative_url }}"></script>
         <script src="{{ '/assets/js/router.js' | relative_url }}"></script>
     </body>
