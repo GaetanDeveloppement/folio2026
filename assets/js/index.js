@@ -2,7 +2,7 @@ const PARALLAX_SCALE_DEFAULT = 1;
 const UPDATE_THRESHOLD = 0.5;
 const SCROLL_POSITION_KEY = "carousel-scroll-position";
 const TRANSITION_ITEM_TOP_KEY = "transition-item-top";
-const BREAKPOINT_MOBILE = 768;
+const BREAKPOINT_MOBILE = 1024;
 
 function isMobileViewport() {
   return window.innerWidth <= BREAKPOINT_MOBILE;
@@ -83,7 +83,6 @@ function initScroll() {
     infinite: true,
     syncTouch: true,
     wrapper,
-    eventsTarget: window,
   });
 
   const restoreKey = isProjectPage

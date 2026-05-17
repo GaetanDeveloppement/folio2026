@@ -15,7 +15,7 @@ $spacing-lg: 24px;
 $spacing-xl: 32px;
 $spacing-2xl: 48px;
 
-$breakpoint-mobile: 768px;
+$breakpoint-mobile: 1024px;
 $parallax-scale: 1.25;
 
 $reveal-ease: cubic-bezier(0.16, 1, 0.3, 1);
@@ -72,11 +72,7 @@ body {
 h1,
 p,
 a {
-    font-size: 20px;
-
-    @media (max-width: $breakpoint-mobile) {
-        font-size: 16px;
-    }
+    font-size: clamp(16px, 1vw + 4px, 20px);
 }
 
 a {
@@ -116,14 +112,21 @@ main {
 
 .sidebar {
     grid-column: 1 / 5;
+    height: 100svh;
     padding: $spacing-md 0;
 
     display: flex;
     flex-direction: column;
     gap: $spacing-2xl;
 
+    &::-webkit-scrollbar {
+        display: none;
+    }
+
     @media (max-width: $breakpoint-mobile) {
         grid-column: auto;
+        height: auto;
+        overflow: visible;
         padding: 0;
     }
 
@@ -168,11 +171,19 @@ main {
         grid-template-columns: repeat(3, var(--grid-column));
         column-gap: var(--grid-gutter);
 
+        overflow-y: auto;
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+
         > p {
             &:not(:last-of-type) {
                 margin-bottom: 16px;
             }
             grid-column: 2 / 4;
+
+            @media (max-width: 1280px) {
+                grid-column: 1 / 4;
+            }
         }
 
         table {
