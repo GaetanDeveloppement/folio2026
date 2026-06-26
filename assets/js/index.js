@@ -90,7 +90,8 @@ function initScroll() {
   lenis = new Lenis({
     infinite: true,
     syncTouch: true,
-    wrapper: window,
+    wrapper,
+    eventsTarget: window,
   });
 
   const restoreKey = isProjectPage
