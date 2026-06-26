@@ -23,7 +23,8 @@
         />
         <noscript>
             <style>
-                .dither-wrap > picture > img {
+                .dither-wrap > picture > img,
+                .dither-wrap > video {
                     visibility: visible;
                 }
                 .sidebar header > *:not(h1),
@@ -58,10 +59,10 @@
                     <div>
                         <p>à propos</p>
                         <p>
-                            designer multidisciplinaire avant tout, je conçois
-                            des images de marque, des interfaces web, de la 3D,
-                            du motion design, du développement web, du webgl, de
-                            l'électronique…
+                            designer multidisciplinaire, je réalise des images
+                            de marque, des interfaces web, de la 3D, du motion
+                            design... mais aussi du développement web, du webgl,
+                            de l'électronique…
                         </p>
                     </div>
                     <div>
@@ -97,7 +98,7 @@
                             <div class="image-container dither-wrap">
                                 {% include responsive-image.html
                                 image_name=image alt=page.project_title
-                                classes="parallax" %}
+                                classes="parallax" project=project_data.page %}
                             </div>
                         </div>
                         {% endfor %} {% else %} {% for project in

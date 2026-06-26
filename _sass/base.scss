@@ -285,7 +285,8 @@ body[data-layout="home"] .sidebar header h1 {
         height: 100%;
     }
 
-    img {
+    img,
+    video {
         display: block;
         width: 100%;
         height: auto;
@@ -297,7 +298,8 @@ body[data-layout="home"] .sidebar header h1 {
 }
 
 .dither-wrap {
-    img {
+    img,
+    video {
         visibility: hidden;
     }
 

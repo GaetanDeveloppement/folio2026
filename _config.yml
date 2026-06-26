@@ -10,14 +10,9 @@ social:
 
 exclude:
   - image-resizer/
-  - CLAUDE.md
   - .idea/
 
 sass:
   style: compressed
 
-plugins:
-  - jekyll-minifier
 
-jekyll-minifier:
-  compress_css: false

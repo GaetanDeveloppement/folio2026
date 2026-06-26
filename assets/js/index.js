@@ -46,9 +46,11 @@ function initScroll() {
   const isProjectPage = getIsProjectPage();
 
   imageElements.forEach(function (item, index) {
-    const parent = item.parentNode.parentNode;
+    const parent = item.closest(".image-container");
     let imageHeight = item.offsetHeight * currentScale;
-    let containerHeight = parent.offsetHeight;
+    let containerHeight = parent
+      ? parent.offsetHeight
+      : item.parentNode.offsetHeight;
     let gap = (imageHeight - containerHeight) / currentScale;
 
     item.dataset.index = index;
@@ -88,7 +90,7 @@ function initScroll() {
   lenis = new Lenis({
     infinite: true,
     syncTouch: true,
-    wrapper,
+    wrapper: window,
   });
 
   const restoreKey = isProjectPage
@@ -113,9 +115,9 @@ function initScroll() {
         if (!item) {
           return;
         }
-        const img = item.querySelector("img.parallax");
-        if (img) {
-          img.setAttribute("data-skip-reveal", "true");
+        const media = item.querySelector("img.parallax, video.parallax");
+        if (media) {
+          media.setAttribute("data-skip-reveal", "true");
         }
       });
     }
@@ -158,7 +160,8 @@ function initScroll() {
       ) {
         const transform = `translateY(${-res}px)`;
         item.style.transform = transform;
-        const canvas = item.parentNode.parentNode.querySelector("canvas");
+        const container = item.closest(".image-container");
+        const canvas = container ? container.querySelector("canvas") : null;
         if (canvas) {
           canvas.style.transform = transform;
         }
@@ -207,7 +210,7 @@ function recomputeAllGaps() {
     if (isNaN(idx) || !images[idx]) {
       return;
     }
-    const parent = item.parentNode.parentNode;
+    const parent = item.closest(".image-container");
     const imageHeight = item.offsetHeight * currentScale;
     const containerHeight = parent.offsetHeight;
     const gap = (imageHeight - containerHeight) / currentScale;

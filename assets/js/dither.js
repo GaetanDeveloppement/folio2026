@@ -8,7 +8,6 @@ const COLOR_QUANTIZE_SHIFT = 4;
 const MIN_COLOR_DISTANCE_SQ = 2500;
 const MAX_PALETTE_SAMPLE_SIZE = 200;
 const HOVER_DURATION = 1500;
-const HOVER_EASE_SPLIT = 0.5;
 const DISSOLVE_REVEAL_DURATION = 2000;
 const DITHER_INIT_ATTR = "data-dither-initialized";
 const COLOR_WAVE_LEAD = 1.5;
@@ -199,19 +198,9 @@ function buildFrag(pixelSize) {
 `;
 }
 
-function easeAsymmetric(p, split, power) {
-  if (p < split) {
-    return 0.5 * Math.pow(p / split, power);
-  }
-  return 1 - 0.5 * Math.pow((1 - p) / (1 - split), power);
-}
-
+// ponytail: inlined at call sites, kept as factory for readability
 function easeOut(p) {
   return 1.0 - Math.pow(1.0 - p, EASING_POWER);
-}
-
-function linear(p) {
-  return p;
 }
 
 function makeBayerMatrix(n) {
@@ -257,12 +246,11 @@ function bayerToUint8(n) {
 const BAYER_DATA = bayerToUint8(BAYER_SIZE);
 
 function extractPalette(img) {
-  const scale = Math.min(
-    1,
-    MAX_PALETTE_SAMPLE_SIZE / Math.max(img.naturalWidth, img.naturalHeight),
-  );
-  const w = Math.round(img.naturalWidth * scale);
-  const h = Math.round(img.naturalHeight * scale);
+  var w = img.naturalWidth || img.videoWidth || 0;
+  var h = img.naturalHeight || img.videoHeight || 0;
+  var scale = Math.min(1, MAX_PALETTE_SAMPLE_SIZE / Math.max(w, h));
+  w = Math.round(w * scale);
+  h = Math.round(h * scale);
 
   if (w === 0 || h === 0) {
     return Array.from({ length: PALETTE_SIZE }, function () {
@@ -270,12 +258,12 @@ function extractPalette(img) {
     });
   }
 
-  const off = document.createElement("canvas");
+  var off = document.createElement("canvas");
   off.width = w;
   off.height = h;
-  const ctx = off.getContext("2d");
+  var ctx = off.getContext("2d");
   ctx.drawImage(img, 0, 0, w, h);
-  const { data } = ctx.getImageData(0, 0, w, h);
+  var data = ctx.getImageData(0, 0, w, h).data;
 
   const counts = new Map();
   for (let i = 0; i < data.length; i += 4) {
@@ -323,24 +311,23 @@ function extractPalette(img) {
 const _sortDataCache = new Map();
 
 function loadImageData(img) {
-  const scale = Math.min(
-    1,
-    SORTED_MAX_SIZE / Math.max(img.naturalWidth, img.naturalHeight),
-  );
-  const w = Math.max(1, Math.round(img.naturalWidth * scale));
-  const h = Math.max(1, Math.round(img.naturalHeight * scale));
+  var w = img.naturalWidth || img.videoWidth || 0;
+  var h = img.naturalHeight || img.videoHeight || 0;
+  var scale = Math.min(1, SORTED_MAX_SIZE / Math.max(w, h));
+  w = Math.max(1, Math.round(w * scale));
+  h = Math.max(1, Math.round(h * scale));
 
-  const off = document.createElement("canvas");
+  var off = document.createElement("canvas");
   off.width = w;
   off.height = h;
-  const ctx = off.getContext("2d");
+  var ctx = off.getContext("2d");
   ctx.drawImage(img, 0, 0, w, h);
-  const imageData = ctx.getImageData(0, 0, w, h);
+  var imageData = ctx.getImageData(0, 0, w, h);
   return { data: new Uint8Array(imageData.data), width: w, height: h };
 }
 
 function getOrLoadSortData(img) {
-  if (!img.naturalWidth) {
+  if (!(img.naturalWidth || img.videoWidth)) {
     return null;
   }
   const key = img.src;
@@ -386,6 +373,7 @@ function ensurePaletteIdx(cached, palette) {
 class DitherCanvas {
   constructor(imgEl, skipReveal = false) {
     this.img = imgEl;
+    this.isVideo = imgEl.tagName === 'VIDEO';
     this.canvas = document.createElement("canvas");
     this.canvas.className = "parallax";
     this.gl = this.canvas.getContext("webgl");
@@ -412,6 +400,7 @@ class DitherCanvas {
     this._sortRafId = null;
     this._sortAnimRafId = null;
     this._sortIdleId = null;
+    this._videoRafId = null;
     this.sortBuffer = null;
     this.sortLum = null;
     this.sortW = 0;
@@ -496,6 +485,10 @@ class DitherCanvas {
         self._resize();
       });
       self.ro.observe(imgEl.parentElement);
+      if (self.isVideo) {
+        self.img.play();
+        self._startVideoLoop();
+      }
       if (!skipReveal) {
         imgEl.style.visibility = "visible";
         self.dissolveFromBlack(DISSOLVE_REVEAL_DURATION);
@@ -506,7 +499,14 @@ class DitherCanvas {
       self.destroy();
     }
 
-    if (imgEl.complete && imgEl.naturalWidth > 0) {
+    if (self.isVideo) {
+      if (imgEl.readyState >= 2) {
+        onReady();
+      } else {
+        imgEl.addEventListener("loadeddata", onReady);
+        imgEl.addEventListener("error", onError);
+      }
+    } else if (imgEl.complete && imgEl.naturalWidth > 0) {
       onReady();
     } else {
       imgEl.addEventListener("load", onReady);
@@ -888,11 +888,10 @@ class DitherCanvas {
 
   _tween(prop, target, duration, rafKey, easeFn) {
     const key = rafKey || "_rafId";
-    const ease =
-      easeFn ||
-      function (p) {
-        return easeAsymmetric(p, EASE_SPLIT, EASING_POWER);
-      };
+    const ease = easeFn || function (p) {
+      var s = EASE_SPLIT, w = EASING_POWER;
+      return p < s ? 0.5 * Math.pow(p / s, w) : 1 - 0.5 * Math.pow((1 - p) / (1 - s), w);
+    };
     cancelAnimationFrame(this[key]);
     const start = performance.now();
     const from = this[prop];
@@ -958,7 +957,7 @@ class DitherCanvas {
       target,
       duration,
       "_clickRadiusRafId",
-      linear,
+      function (p) { return p; },
     );
   }
 
@@ -975,13 +974,28 @@ class DitherCanvas {
     );
   }
 
+  _startVideoLoop() {
+    var self = this;
+    function tick() {
+      if (!self.gl || !self.isVideo) return;
+      if (!self.img.paused) self.render();
+      self._videoRafId = requestAnimationFrame(tick);
+    }
+    self._videoRafId = requestAnimationFrame(tick);
+  }
+
   render() {
     if (!this.textureReady) {
       return;
     }
 
-    const gl = this.gl;
+    var gl = this.gl;
     gl.useProgram(this.prog);
+
+    if (this.isVideo) {
+      gl.bindTexture(gl.TEXTURE_2D, this.imgTex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.img);
+    }
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.imgTex);
@@ -1020,9 +1034,11 @@ class DitherCanvas {
     cancelAnimationFrame(this._clickRadiusRafId);
     cancelAnimationFrame(this._sortRafId);
     cancelAnimationFrame(this._sortAnimRafId);
+    cancelAnimationFrame(this._videoRafId);
     if (this._sortIdleId !== null && window.cancelIdleCallback) {
       window.cancelIdleCallback(this._sortIdleId);
     }
+    if (this.isVideo) { this.img.pause(); }
     this.sortBuffer = null;
     this.sortLum = null;
 
@@ -1125,25 +1141,25 @@ function initDither(root) {
   }
 
   if (!isWebGLAvailable()) {
-    root.querySelectorAll(".dither-wrap img").forEach(function (img) {
-      img.style.visibility = "visible";
+    root.querySelectorAll(".dither-wrap img, .dither-wrap video").forEach(function (el) {
+      el.style.visibility = "visible";
     });
     return;
   }
 
-  root.querySelectorAll(".dither-wrap img.parallax").forEach(function (img) {
-    if (img.hasAttribute(DITHER_INIT_ATTR)) {
+  root.querySelectorAll(".dither-wrap img.parallax, .dither-wrap video.parallax").forEach(function (el) {
+    if (el.hasAttribute(DITHER_INIT_ATTR)) {
       return;
     }
 
-    img.setAttribute(DITHER_INIT_ATTR, "true");
+    el.setAttribute(DITHER_INIT_ATTR, "true");
 
-    const skipReveal = img.hasAttribute("data-skip-reveal");
+    var skipReveal = el.hasAttribute("data-skip-reveal");
     if (skipReveal) {
-      img.removeAttribute("data-skip-reveal");
+      el.removeAttribute("data-skip-reveal");
     }
 
-    ditherInstances.push(new DitherCanvas(img, skipReveal));
+    ditherInstances.push(new DitherCanvas(el, skipReveal));
   });
 }
 
