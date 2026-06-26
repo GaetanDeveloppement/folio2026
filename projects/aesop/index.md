@@ -7,7 +7,7 @@ username: "gaëtan jestin"
 year: "2025"
 ---
 
-R&D pour la gamme de parfums Heremia Aesop. Still préparatifs à un motion design complet.
+Aesop proposent des soins du visage, des cheveux et du corps soigneusement conçus dans un objectif d’efficacité et de plaisir sensoriel.
 
 |  <em>livrables</em>  |  motion design <br/> direction artistique 3D  |
-|  <em>status</em>  |  travail en cours  |
+|  <em>status</em>  |  R&D  |

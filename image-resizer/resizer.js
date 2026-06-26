@@ -22,7 +22,7 @@ const sizes = [
 ];
 
 const inputExtRegex = /\.(png|jpg|jpeg|webp)$/i;
-const generatedFileRegex = /^(.+)-(\d+)\.(png|webp)$/i;
+const generatedFileRegex = /^(.+)-(\d+)\.webp$/i;
 
 // Create output folder if it doesn't exist
 if (!fs.existsSync(outputFolder)) {
@@ -108,13 +108,6 @@ async function processImages() {
       console.log(`Processing ${file}...`);
 
       for (const size of sizes) {
-        // Generate PNG
-        await sharp(inputPath)
-          .resize(size)
-          .png({ quality: 90 })
-          .toFile(path.join(outputFolder, `${baseName}-${size}.png`));
-
-        // Generate WebP
         await sharp(inputPath)
           .resize(size)
           .webp({ quality: 85 })

@@ -6,11 +6,33 @@
     "page": "aesop",
     "images": [
       "aesop-1.webp",
-      "aesop-2.webp",
-      "aesop-1.webp",
-      "aesop-2.webp",
-      "aesop-1.webp",
+      "aesop-cap-drip.mp4",
+      "aesop-focus.mp4",
+      "aesop-reveal.mp4",
+      "aesop-turntable.mp4",
       "aesop-2.webp"
+    ]
+  },
+  {
+    "title": "Moon — brand identity",
+    "image": "moon-8.webp",
+    "alt": "Moon energies logo",
+    "page": "moon",
+    "images": [
+      "moon-8.webp",
+      "moon-2.webp",
+      "moon-3.webp",
+      "moon-4.webp",
+      "moon-5.webp",
+      "moon-6.webp",
+      "moon-7.webp",
+      "moon-1.webp",
+      "moon-9.webp",
+      "moon-10.webp",
+      "moon-11.webp",
+      "moon-12.webp",
+      "moon-13.webp",
+      "moon-14.webp"
     ]
   },
   {
