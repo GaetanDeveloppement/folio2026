@@ -79,8 +79,6 @@ function initScroll() {
     el.removeAttribute("data-dither-initialized");
   });
 
-  window.dispatchEvent(new CustomEvent("ditherInitClone", { detail: clone }));
-
   lenis = new Lenis({
     infinite: true,
     syncTouch: true,
@@ -121,6 +119,10 @@ function initScroll() {
     lenis.scrollTo(position, { immediate: true });
     sessionStorage.removeItem(restoreKey);
   }
+
+  // Dispatch after data-skip-reveal is set so the clone's first image (which
+  // is positioned at targetY after scroll restore) skips its reveal animation.
+  window.dispatchEvent(new CustomEvent("ditherInitClone", { detail: clone }));
 
   items = Array.from(document.querySelectorAll(".parallax:not(canvas)"));
 
