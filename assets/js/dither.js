@@ -354,8 +354,7 @@ function ensurePaletteIdx(cached, palette) {
 class DitherRenderer {
   constructor() {
     this.canvas = document.createElement("canvas");
-    this.canvas.style.cssText =
-      "position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:1";
+    this.canvas.style.cssText = "position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:1";
     this.gl = this.canvas.getContext("webgl");
     if (!this.gl) return;
 
@@ -378,8 +377,7 @@ class DitherRenderer {
 
     this.buf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buf);
-    gl.bufferData(gl.ARRAY_BUFFER,
-      new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
     const aPos = gl.getAttribLocation(prog, "a_pos");
     gl.enableVertexAttribArray(aPos);
     gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
@@ -387,20 +385,20 @@ class DitherRenderer {
     this.bayerTex = this._makeTex(BAYER_DATA, BAYER_SIZE, gl.LUMINANCE, gl.REPEAT);
 
     this.u = {
-      image:       gl.getUniformLocation(prog, "u_image"),
-      sorted:      gl.getUniformLocation(prog, "u_sorted"),
-      bayer:       gl.getUniformLocation(prog, "u_bayer"),
-      palette:     gl.getUniformLocation(prog, "u_palette"),
-      resolution:  gl.getUniformLocation(prog, "u_resolution"),
-      dissolve:    gl.getUniformLocation(prog, "u_dissolve"),
-      hover:       gl.getUniformLocation(prog, "u_hover"),
-      reveal:      gl.getUniformLocation(prog, "u_reveal"),
-      light:       gl.getUniformLocation(prog, "u_light"),
-      sort:        gl.getUniformLocation(prog, "u_sort"),
-      mouse:       gl.getUniformLocation(prog, "u_mouse"),
-      radius:      gl.getUniformLocation(prog, "u_radius"),
+      image: gl.getUniformLocation(prog, "u_image"),
+      sorted: gl.getUniformLocation(prog, "u_sorted"),
+      bayer: gl.getUniformLocation(prog, "u_bayer"),
+      palette: gl.getUniformLocation(prog, "u_palette"),
+      resolution: gl.getUniformLocation(prog, "u_resolution"),
+      dissolve: gl.getUniformLocation(prog, "u_dissolve"),
+      hover: gl.getUniformLocation(prog, "u_hover"),
+      reveal: gl.getUniformLocation(prog, "u_reveal"),
+      light: gl.getUniformLocation(prog, "u_light"),
+      sort: gl.getUniformLocation(prog, "u_sort"),
+      mouse: gl.getUniformLocation(prog, "u_mouse"),
+      radius: gl.getUniformLocation(prog, "u_radius"),
       clickRadius: gl.getUniformLocation(prog, "u_clickRadius"),
-      time:        gl.getUniformLocation(prog, "u_time"),
+      time: gl.getUniformLocation(prog, "u_time"),
     };
 
     gl.enable(gl.BLEND);
@@ -431,9 +429,9 @@ class DitherRenderer {
 
   deleteTextures(inst) {
     const gl = this.gl;
-    if (inst.imgTex)     gl.deleteTexture(inst.imgTex);
+    if (inst.imgTex) gl.deleteTexture(inst.imgTex);
     if (inst.paletteTex) gl.deleteTexture(inst.paletteTex);
-    if (inst.sortedTex)  gl.deleteTexture(inst.sortedTex);
+    if (inst.sortedTex) gl.deleteTexture(inst.sortedTex);
   }
 
   _loop() {
@@ -452,10 +450,10 @@ class DitherRenderer {
       const containerEl = inst.img.closest(".image-container");
       const containerRect = containerEl ? containerEl.getBoundingClientRect() : imgRect;
 
-      const sx = Math.round(containerRect.left);
-      const sy = Math.round(H - containerRect.bottom);
-      const sw = Math.round(containerRect.width);
-      const sh = Math.round(containerRect.height);
+      const sx = Math.floor(containerRect.left);
+      const sy = Math.floor(H - containerRect.bottom);
+      const sw = Math.ceil(containerRect.right) - sx;
+      const sh = Math.ceil(H - containerRect.top) - sy;
       if (sw <= 0 || sh <= 0 || containerRect.bottom < 0 || containerRect.top > H) continue;
 
       const ix = Math.round(imgRect.left);
@@ -489,16 +487,16 @@ class DitherRenderer {
       gl.bindTexture(gl.TEXTURE_2D, inst.sortedTex);
       gl.uniform1i(this.u.sorted, 3);
 
-      gl.uniform2f(this.u.resolution,  iw, ih);
-      gl.uniform1f(this.u.dissolve,    inst.dissolve);
-      gl.uniform1f(this.u.hover,       inst.hover);
-      gl.uniform1f(this.u.reveal,      inst.revealOnly ? 1.0 : 0.0);
-      gl.uniform1f(this.u.light,       _lightMode ? 1.0 : 0.0);
-      gl.uniform1f(this.u.sort,        inst.sort);
-      gl.uniform2f(this.u.mouse,       inst.mouse[0], inst.mouse[1]);
-      gl.uniform1f(this.u.radius,      inst.radius);
+      gl.uniform2f(this.u.resolution, iw, ih);
+      gl.uniform1f(this.u.dissolve, inst.dissolve);
+      gl.uniform1f(this.u.hover, inst.hover);
+      gl.uniform1f(this.u.reveal, inst.revealOnly ? 1.0 : 0.0);
+      gl.uniform1f(this.u.light, _lightMode ? 1.0 : 0.0);
+      gl.uniform1f(this.u.sort, inst.sort);
+      gl.uniform2f(this.u.mouse, inst.mouse[0], inst.mouse[1]);
+      gl.uniform1f(this.u.radius, inst.radius);
       gl.uniform1f(this.u.clickRadius, inst.clickRadius);
-      gl.uniform1f(this.u.time,        (performance.now() / 1000) % 1000);
+      gl.uniform1f(this.u.time, (performance.now() / 1000) % 1000);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
   }
@@ -532,8 +530,7 @@ class DitherCanvas {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
-      new Uint8Array([0, 0, 0, 255]));
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
 
     this.isMobile = window.innerWidth <= BREAKPOINT_MOBILE;
     this.dissolve = 1.0;
