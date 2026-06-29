@@ -220,8 +220,8 @@ body[data-layout="home"] .sidebar header h1 {
                 margin-top: $spacing-lg;
                 line-height: 150%;
 
-                tbody tr {
-                    grid-template-columns: 1fr 2fr;
+                tbody {
+                    grid-template-columns: 1fr;
                     margin-bottom: $spacing-md;
                 }
             }
