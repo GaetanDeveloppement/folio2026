@@ -7,19 +7,22 @@
     "images": [
       "aesop-1.webp",
       "aesop-cap-drip.mp4",
+      "aesop-2.webp",
+      "aesop-5.webp",
       "aesop-focus.mp4",
+      "aesop-4.webp",
       "aesop-reveal.mp4",
       "aesop-turntable.mp4",
-      "aesop-2.webp"
+      "aesop-3.webp"
     ]
   },
   {
     "title": "webdesigns",
-    "image": "moon-8.webp",
+    "image": "moon-6.webp",
     "alt": "Moon energies logo",
     "page": "webdesigns",
     "images": [
-      "moon-8.webp",
+      "moon-6.webp",
       "moon-2.webp",
       "moon-3.webp",
       "moon-4.webp",
@@ -36,31 +39,11 @@
     ]
   },
   {
-    "title": "PMC — branding",
-    "image": "pmc-1.webp",
-    "alt": "Logo for pmc high school",
-    "page": "pmc",
-    "images": [
-      "pmc-1.webp",
-      "pmc-2.webp",
-      "pmc-1.webp",
-      "pmc-2.webp",
-      "pmc-1.webp",
-      "pmc-2.webp"
-    ]
-  },
-  {
     "title": "Phronesis — interactive machine",
     "image": "phronesis-1.webp",
     "alt": "Phronesis' interactive machine",
     "page": "phronesis",
-    "images": [
-      "phronesis-1.webp",
-      "phronesis-2.webp",
-      "phronesis-3.webp",
-      "phronesis-4.webp",
-      "phronesis-5.webp"
-    ]
+    "images": ["phronesis-1.webp", "phronesis-2.webp", "phronesis-3.webp", "phronesis-4.webp", "phronesis-5.webp"]
   },
   {
     "title": "Terapolis — webgl experience",
@@ -81,16 +64,10 @@
     "image": "shark-1.webp",
     "alt": "Close up of a motorcycle rear wheel at night",
     "page": "shark",
-    "images": [
-      "shark-1.webp",
-      "shark-2.webp",
-      "shark-3.webp",
-      "shark-4.webp",
-      "shark-5.webp"
-    ]
+    "images": ["shark-1.webp", "shark-2.webp", "shark-3.webp", "shark-4.webp", "shark-5.webp"]
   },
   {
-    "title": "Nolka — branding",
+    "title": "nolka — branding",
     "image": "nolka-1.webp",
     "alt": "A coffee shop named nolka",
     "page": "nolka",

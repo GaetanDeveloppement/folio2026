@@ -7,8 +7,9 @@ username: "gaëtan jestin"
 year: "2025"
 ---
 
-Réalisation des effets spéciaux d'une publicité de casques moto de la marque Shark pour [Seizo Paris ↗](https://www.seizo.paris/)
-Simulation de verre
+Shark est une marque française de casques moto reconnue depuis près de quarante ans pour son expertise en sécurité et en aérodynamique.
+
+Réalisation des VFX d'une publicité digitale dédiée à la gamme Dark Shadow, diffusée sur le stand Shark de l'EICMA 2026, le salon international de la moto à Milan.
 
 
 |  <em>livrables</em>       |  visual effects  |

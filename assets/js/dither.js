@@ -143,8 +143,8 @@ function buildFrag(pixelSize) {
         float colorHover = 1.0;
         vec3 result = (dissolveT < colorHover) ? color : bw;
 
-        vec3 bgDark  = vec3(0.012, 0.012, 0.008);
-        vec3 bgLight = vec3(0.953, 0.969, 0.984);
+        vec3 bgDark  = vec3(0.0, 0.00, 0.00);
+        vec3 bgLight = vec3(1.0, 1.0, 1.0);
         vec3 bgColor = mix(bgDark, bgLight, u_light);
 
         if (u_dissolve > 0.0) {
