@@ -31,12 +31,7 @@ function getPixelSize() {
 }
 
 function isWebGLAvailable() {
-  try {
-    const canvas = document.createElement("canvas");
-    return !!(canvas.getContext("webgl") || canvas.getContext("experimental-webgl"));
-  } catch (e) {
-    return false;
-  }
+  return !!(ditherRenderer && ditherRenderer.gl);
 }
 
 let _mouseX = -1;
@@ -44,9 +39,6 @@ let _mouseY = -1;
 let _lightMode = window.matchMedia("(prefers-color-scheme: light)").matches;
 window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function (e) {
   _lightMode = e.matches;
-  ditherInstances.forEach(function (dc) {
-    dc.render();
-  });
 });
 document.addEventListener(
   "mousemove",
@@ -359,20 +351,189 @@ function ensurePaletteIdx(cached, palette) {
   return idx;
 }
 
+class DitherRenderer {
+  constructor() {
+    this.canvas = document.createElement("canvas");
+    this.canvas.style.cssText =
+      "position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:1";
+    this.gl = this.canvas.getContext("webgl");
+    if (!this.gl) return;
+
+    const gl = this.gl;
+    this._resize();
+    window.addEventListener("resize", () => this._resize());
+
+    function compile(type, src) {
+      const s = gl.createShader(type);
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      return s;
+    }
+    const prog = gl.createProgram();
+    gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
+    gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, buildFrag(getPixelSize())));
+    gl.linkProgram(prog);
+    gl.useProgram(prog);
+    this.prog = prog;
+
+    this.buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.buf);
+    gl.bufferData(gl.ARRAY_BUFFER,
+      new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
+    const aPos = gl.getAttribLocation(prog, "a_pos");
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+    this.bayerTex = this._makeTex(BAYER_DATA, BAYER_SIZE, gl.LUMINANCE, gl.REPEAT);
+
+    this.u = {
+      image:       gl.getUniformLocation(prog, "u_image"),
+      sorted:      gl.getUniformLocation(prog, "u_sorted"),
+      bayer:       gl.getUniformLocation(prog, "u_bayer"),
+      palette:     gl.getUniformLocation(prog, "u_palette"),
+      resolution:  gl.getUniformLocation(prog, "u_resolution"),
+      dissolve:    gl.getUniformLocation(prog, "u_dissolve"),
+      hover:       gl.getUniformLocation(prog, "u_hover"),
+      reveal:      gl.getUniformLocation(prog, "u_reveal"),
+      light:       gl.getUniformLocation(prog, "u_light"),
+      sort:        gl.getUniformLocation(prog, "u_sort"),
+      mouse:       gl.getUniformLocation(prog, "u_mouse"),
+      radius:      gl.getUniformLocation(prog, "u_radius"),
+      clickRadius: gl.getUniformLocation(prog, "u_clickRadius"),
+      time:        gl.getUniformLocation(prog, "u_time"),
+    };
+
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    gl.enable(gl.SCISSOR_TEST);
+
+    this._rafId = requestAnimationFrame(this._loop.bind(this));
+  }
+
+  _resize() {
+    this.canvas.width = window.innerWidth;
+    this.canvas.height = window.innerHeight;
+  }
+
+  _makeTex(data, size, format, wrap) {
+    const gl = this.gl;
+    const t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    if (data) {
+      gl.texImage2D(gl.TEXTURE_2D, 0, format, size, size, 0, format, gl.UNSIGNED_BYTE, data);
+    }
+    return t;
+  }
+
+  deleteTextures(inst) {
+    const gl = this.gl;
+    if (inst.imgTex)     gl.deleteTexture(inst.imgTex);
+    if (inst.paletteTex) gl.deleteTexture(inst.paletteTex);
+    if (inst.sortedTex)  gl.deleteTexture(inst.sortedTex);
+  }
+
+  _loop() {
+    this._rafId = requestAnimationFrame(this._loop.bind(this));
+    const gl = this.gl;
+    const H = this.canvas.height;
+
+    gl.scissor(0, 0, this.canvas.width, H);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    for (const inst of ditherInstances) {
+      if (!inst.textureReady || inst._revealDone) continue;
+
+      const imgRect = inst.img.getBoundingClientRect();
+      const containerEl = inst.img.closest(".image-container");
+      const containerRect = containerEl ? containerEl.getBoundingClientRect() : imgRect;
+
+      const sx = Math.round(containerRect.left);
+      const sy = Math.round(H - containerRect.bottom);
+      const sw = Math.round(containerRect.width);
+      const sh = Math.round(containerRect.height);
+      if (sw <= 0 || sh <= 0 || containerRect.bottom < 0 || containerRect.top > H) continue;
+
+      const ix = Math.round(imgRect.left);
+      const iy = Math.round(H - imgRect.bottom);
+      const iw = Math.round(imgRect.width);
+      const ih = Math.round(imgRect.height);
+      if (iw <= 0 || ih <= 0) continue;
+
+      gl.scissor(sx, sy, sw, sh);
+      gl.viewport(ix, iy, iw, ih);
+
+      if (inst.isVideo && !inst.img.paused) {
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, inst.imgTex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, inst.img);
+      }
+
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, inst.imgTex);
+      gl.uniform1i(this.u.image, 0);
+
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, this.bayerTex);
+      gl.uniform1i(this.u.bayer, 1);
+
+      gl.activeTexture(gl.TEXTURE2);
+      gl.bindTexture(gl.TEXTURE_2D, inst.paletteTex);
+      gl.uniform1i(this.u.palette, 2);
+
+      gl.activeTexture(gl.TEXTURE3);
+      gl.bindTexture(gl.TEXTURE_2D, inst.sortedTex);
+      gl.uniform1i(this.u.sorted, 3);
+
+      gl.uniform2f(this.u.resolution,  iw, ih);
+      gl.uniform1f(this.u.dissolve,    inst.dissolve);
+      gl.uniform1f(this.u.hover,       inst.hover);
+      gl.uniform1f(this.u.reveal,      inst.revealOnly ? 1.0 : 0.0);
+      gl.uniform1f(this.u.light,       _lightMode ? 1.0 : 0.0);
+      gl.uniform1f(this.u.sort,        inst.sort);
+      gl.uniform2f(this.u.mouse,       inst.mouse[0], inst.mouse[1]);
+      gl.uniform1f(this.u.radius,      inst.radius);
+      gl.uniform1f(this.u.clickRadius, inst.clickRadius);
+      gl.uniform1f(this.u.time,        (performance.now() / 1000) % 1000);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+    }
+  }
+}
+
+let ditherRenderer = null;
+
 class DitherCanvas {
   constructor(imgEl, skipReveal = false) {
     this.img = imgEl;
     this.isVideo = imgEl.tagName === "VIDEO";
-    this.canvas = document.createElement("canvas");
-    this.canvas.className = "parallax";
-    this.gl = this.canvas.getContext("webgl");
 
-    if (!this.gl) {
+    if (!ditherRenderer || !ditherRenderer.gl) {
       return;
     }
 
-    imgEl.parentElement.appendChild(this.canvas);
-    this._setup();
+    const gl = ditherRenderer.gl;
+
+    this.imgTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.imgTex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+    this.paletteTex = ditherRenderer._makeTex(null, 1, gl.RGB, gl.CLAMP_TO_EDGE);
+
+    this.sortedTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.sortedTex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+      new Uint8Array([0, 0, 0, 255]));
 
     this.isMobile = window.innerWidth <= BREAKPOINT_MOBILE;
     this.dissolve = 1.0;
@@ -389,7 +550,6 @@ class DitherCanvas {
     this._sortRafId = null;
     this._sortAnimRafId = null;
     this._sortIdleId = null;
-    this._videoRafId = null;
     this.sortBuffer = null;
     this.sortLum = null;
     this.sortW = 0;
@@ -400,7 +560,7 @@ class DitherCanvas {
     this._pointerOver = false;
     this._hoverStart = null;
     this.textureReady = false;
-    this.ro = null;
+    this._revealDone = false;
     this.revealOnly = document.body.dataset.layout === "project";
 
     if (skipReveal) {
@@ -411,11 +571,11 @@ class DitherCanvas {
 
     if (!this.revealOnly && !this.isMobile) {
       function pollHover() {
-        if (!self.gl) {
+        if (!ditherRenderer || !ditherRenderer.gl) {
           return;
         }
 
-        const rect = self.canvas.getBoundingClientRect();
+        const rect = self.img.getBoundingClientRect();
         let inRange = false;
         let pointerOver = false;
         let nx = self.mouse[0];
@@ -465,15 +625,12 @@ class DitherCanvas {
       self._uploadTexture();
       if (skipReveal) {
         self.dissolve = 0.0;
+        if (self.revealOnly) {
+          self._revealDone = true;
+        }
       }
-      self._resize();
-      self.ro = new ResizeObserver(function () {
-        self._resize();
-      });
-      self.ro.observe(imgEl.parentElement);
       if (self.isVideo) {
         self.img.play();
-        self._startVideoLoop();
       }
       if (!skipReveal) {
         imgEl.style.visibility = "visible";
@@ -522,97 +679,8 @@ class DitherCanvas {
     this._animateOpacity(0);
   }
 
-  _setup() {
-    const gl = this.gl;
-
-    function compile(type, src) {
-      const s = gl.createShader(type);
-      gl.shaderSource(s, src);
-      gl.compileShader(s);
-      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-        throw new Error(gl.getShaderInfoLog(s));
-      }
-      return s;
-    }
-
-    const prog = gl.createProgram();
-    gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
-    gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, buildFrag(getPixelSize())));
-    gl.linkProgram(prog);
-
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-      throw new Error(gl.getProgramInfoLog(prog));
-    }
-
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    gl.useProgram(prog);
-    this.prog = prog;
-
-    this.buf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.buf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
-
-    const aPos = gl.getAttribLocation(prog, "a_pos");
-    gl.enableVertexAttribArray(aPos);
-    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
-
-    this.u = {
-      image: gl.getUniformLocation(prog, "u_image"),
-      sorted: gl.getUniformLocation(prog, "u_sorted"),
-      bayer: gl.getUniformLocation(prog, "u_bayer"),
-      palette: gl.getUniformLocation(prog, "u_palette"),
-      resolution: gl.getUniformLocation(prog, "u_resolution"),
-      dissolve: gl.getUniformLocation(prog, "u_dissolve"),
-      hover: gl.getUniformLocation(prog, "u_hover"),
-      reveal: gl.getUniformLocation(prog, "u_reveal"),
-      light: gl.getUniformLocation(prog, "u_light"),
-      sort: gl.getUniformLocation(prog, "u_sort"),
-      mouse: gl.getUniformLocation(prog, "u_mouse"),
-      radius: gl.getUniformLocation(prog, "u_radius"),
-      clickRadius: gl.getUniformLocation(prog, "u_clickRadius"),
-      time: gl.getUniformLocation(prog, "u_time"),
-    };
-
-    this.bayerTex = this._makeTex(BAYER_DATA, BAYER_SIZE, gl.LUMINANCE, gl.REPEAT);
-
-    this.paletteTex = this._makeTex(null, 1, gl.RGB, gl.CLAMP_TO_EDGE);
-
-    this.imgTex = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, this.imgTex);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-    this.sortedTex = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, this.sortedTex);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    // NEAREST so the user sees crisp per-pixel swaps, not a blur across columns.
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
-  }
-
-  _makeTex(data, size, format, wrap) {
-    const gl = this.gl;
-    const t = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, t);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-
-    if (data) {
-      gl.texImage2D(gl.TEXTURE_2D, 0, format, size, size, 0, format, gl.UNSIGNED_BYTE, data);
-    }
-
-    return t;
-  }
-
   _uploadTexture() {
-    const gl = this.gl;
+    const gl = ditherRenderer.gl;
 
     gl.bindTexture(gl.TEXTURE_2D, this.imgTex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.img);
@@ -653,10 +721,10 @@ class DitherCanvas {
   }
 
   _uploadSortedTex() {
-    if (!this.gl || !this.sortBuffer) {
+    if (!ditherRenderer || !ditherRenderer.gl || !this.sortBuffer) {
       return;
     }
-    const gl = this.gl;
+    const gl = ditherRenderer.gl;
     gl.bindTexture(gl.TEXTURE_2D, this.sortedTex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.sortW, this.sortH, 0, gl.RGBA, gl.UNSIGNED_BYTE, this.sortBuffer);
   }
@@ -704,7 +772,7 @@ class DitherCanvas {
   }
 
   startSort() {
-    if (!this.gl) {
+    if (!ditherRenderer || !ditherRenderer.gl) {
       return;
     }
     cancelAnimationFrame(this._sortAnimRafId);
@@ -752,7 +820,7 @@ class DitherCanvas {
 
     const self = this;
     function tick() {
-      if (!self.gl || !self.sortBuffer) {
+      if (!ditherRenderer || !ditherRenderer.gl || !self.sortBuffer) {
         self._sortAnimRafId = null;
         return;
       }
@@ -771,7 +839,7 @@ class DitherCanvas {
   resetSort() {
     cancelAnimationFrame(this._sortAnimRafId);
     this._sortAnimRafId = null;
-    if (!this.gl) {
+    if (!ditherRenderer || !ditherRenderer.gl) {
       return Promise.resolve();
     }
     const self = this;
@@ -780,24 +848,6 @@ class DitherCanvas {
       self.sortLum = null;
       self.sortDone = false;
     });
-  }
-
-  _resize() {
-    const rect = this.img.getBoundingClientRect();
-    const w = Math.round(rect.width);
-    const h = Math.round(rect.height);
-
-    if (w === 0 || h === 0) {
-      return;
-    }
-
-    this.canvas.width = w;
-    this.canvas.height = h;
-    const gl = this.gl;
-    gl.useProgram(this.prog);
-    gl.viewport(0, 0, w, h);
-    gl.uniform2f(this.u.resolution, w, h);
-    this.render();
   }
 
   _tween(prop, target, duration, rafKey, easeFn) {
@@ -843,9 +893,7 @@ class DitherCanvas {
   }
 
   dissolveToBlack(duration) {
-    if (this.canvas) {
-      this.canvas.style.display = "";
-    }
+    this._revealDone = false;
     cancelAnimationFrame(this._pollRafId);
     this.dissolve = 0;
     // Bleed canvases have hover > 0, which makes them transparent inside the
@@ -861,7 +909,8 @@ class DitherCanvas {
     cancelAnimationFrame(this._clickRadiusRafId);
     this.hover = 1.0;
     this.clickRadius = 0.0;
-    const aspect = this.canvas.width / this.canvas.height;
+    const _r = this.img.getBoundingClientRect();
+    const aspect = _r.width / _r.height;
     const dx = Math.max(this.mouse[0], 1 - this.mouse[0]) * aspect;
     const dy = Math.max(this.mouse[1], 1 - this.mouse[1]);
     const maxDist = Math.sqrt(dx * dx + dy * dy);
@@ -876,66 +925,15 @@ class DitherCanvas {
 
   dissolveFromBlack(duration) {
     this.dissolve = 1.0;
-    this.render();
     const self = this;
     return this._tween("dissolve", 0, duration, "_dissolveRafId").then(function () {
-      if (self.revealOnly && self.canvas) {
-        self.canvas.style.display = "none";
+      if (self.revealOnly) {
+        self._revealDone = true;
       }
     });
   }
 
-  _startVideoLoop() {
-    var self = this;
-    function tick() {
-      if (!self.gl || !self.isVideo) return;
-      if (!self.img.paused) self.render();
-      self._videoRafId = requestAnimationFrame(tick);
-    }
-    self._videoRafId = requestAnimationFrame(tick);
-  }
-
-  render() {
-    if (!this.textureReady) {
-      return;
-    }
-
-    var gl = this.gl;
-    gl.useProgram(this.prog);
-
-    if (this.isVideo) {
-      gl.bindTexture(gl.TEXTURE_2D, this.imgTex);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.img);
-    }
-
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this.imgTex);
-    gl.uniform1i(this.u.image, 0);
-
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, this.bayerTex);
-    gl.uniform1i(this.u.bayer, 1);
-
-    gl.activeTexture(gl.TEXTURE2);
-    gl.bindTexture(gl.TEXTURE_2D, this.paletteTex);
-    gl.uniform1i(this.u.palette, 2);
-
-    gl.activeTexture(gl.TEXTURE3);
-    gl.bindTexture(gl.TEXTURE_2D, this.sortedTex);
-    gl.uniform1i(this.u.sorted, 3);
-
-    gl.uniform1f(this.u.dissolve, this.dissolve);
-    gl.uniform1f(this.u.hover, this.hover);
-    gl.uniform1f(this.u.reveal, this.revealOnly ? 1.0 : 0.0);
-    gl.uniform1f(this.u.light, _lightMode ? 1.0 : 0.0);
-    gl.uniform1f(this.u.sort, this.sort);
-    gl.uniform2f(this.u.mouse, this.mouse[0], this.mouse[1]);
-    gl.uniform1f(this.u.radius, this.radius);
-    gl.uniform1f(this.u.clickRadius, this.clickRadius);
-    gl.uniform1f(this.u.time, (performance.now() / 1000) % 1000);
-
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-  }
+  render() {}
 
   destroy() {
     cancelAnimationFrame(this._rafId);
@@ -945,7 +943,6 @@ class DitherCanvas {
     cancelAnimationFrame(this._clickRadiusRafId);
     cancelAnimationFrame(this._sortRafId);
     cancelAnimationFrame(this._sortAnimRafId);
-    cancelAnimationFrame(this._videoRafId);
     if (this._sortIdleId !== null && window.cancelIdleCallback) {
       window.cancelIdleCallback(this._sortIdleId);
     }
@@ -955,41 +952,8 @@ class DitherCanvas {
     this.sortBuffer = null;
     this.sortLum = null;
 
-    if (this.ro) {
-      this.ro.disconnect();
-    }
-
-    if (this.gl) {
-      const gl = this.gl;
-      if (this.imgTex) {
-        gl.deleteTexture(this.imgTex);
-      }
-      if (this.sortedTex) {
-        gl.deleteTexture(this.sortedTex);
-      }
-      if (this.bayerTex) {
-        gl.deleteTexture(this.bayerTex);
-      }
-      if (this.paletteTex) {
-        gl.deleteTexture(this.paletteTex);
-      }
-      if (this.buf) {
-        gl.deleteBuffer(this.buf);
-      }
-      if (this.prog) {
-        gl.deleteProgram(this.prog);
-      }
-
-      const loseContext = gl.getExtension("WEBGL_lose_context");
-      if (loseContext) {
-        loseContext.loseContext();
-      }
-
-      this.gl = null;
-    }
-
-    if (this.canvas && this.canvas.parentElement) {
-      this.canvas.remove();
+    if (ditherRenderer) {
+      ditherRenderer.deleteTextures(this);
     }
 
     this.textureReady = false;
@@ -1129,6 +1093,10 @@ function dissolveAllFromBlack(duration) {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
+  ditherRenderer = new DitherRenderer();
+  if (ditherRenderer.gl) {
+    document.body.appendChild(ditherRenderer.canvas);
+  }
   initDither();
 });
 

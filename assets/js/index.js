@@ -75,17 +75,11 @@ function initScroll() {
   scroller.after(clone);
   clone.id = "clone";
 
-  clone.querySelectorAll(".dither-wrap canvas").forEach(function (c) {
-    c.remove();
-  });
-
   clone.querySelectorAll("[data-dither-initialized]").forEach(function (el) {
     el.removeAttribute("data-dither-initialized");
   });
 
-  if (!isProjectPage) {
-    window.dispatchEvent(new CustomEvent("ditherInitClone", { detail: clone }));
-  }
+  window.dispatchEvent(new CustomEvent("ditherInitClone", { detail: clone }));
 
   lenis = new Lenis({
     infinite: true,
@@ -161,11 +155,6 @@ function initScroll() {
       ) {
         const transform = `translateY(${-res}px)`;
         item.style.transform = transform;
-        const container = item.closest(".image-container");
-        const canvas = container ? container.querySelector("canvas") : null;
-        if (canvas) {
-          canvas.style.transform = transform;
-        }
         lastOffsets.set(item, res);
       }
     });
