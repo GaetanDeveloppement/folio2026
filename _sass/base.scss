@@ -182,15 +182,27 @@ body[data-layout="home"] .sidebar header h1 {
                 line-height: 150%;
             }
 
-            tbody tr {
-                display: grid;
-                grid-template-columns: repeat(3, var(--grid-column));
-                column-gap: var(--grid-gutter);
-                margin-bottom: 40px;
+            tbody {
+                @media (max-width: 1440px) {
+                    display: grid;
+                    grid-template-columns: repeat(2, var(--grid-column));
+                    column-gap: var(--grid-gutter);
+                }
+                tr {
+                    display: grid;
+                    grid-template-columns: repeat(3, var(--grid-column));
+                    column-gap: var(--grid-gutter);
+                    margin-bottom: 40px;
 
-                td {
                     @media (max-width: 1440px) {
-                        grid-column: 1 / 5;
+                        display: flex;
+                        flex-direction: column;
+                    }
+
+                    td {
+                        @media (max-width: 1440px) {
+                            grid-column: 1 / 5;
+                        }
                     }
                 }
             }
