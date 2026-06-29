@@ -14,16 +14,12 @@ const COLOR_WAVE_LEAD = 1.5;
 const HOVER_SPREAD_SCALE = 1.6;
 const EASE_SPLIT = 0.2;
 const EASING_POWER = 3;
-// Hover circle (cursor-following reveal mask, single physical disk that bleeds across canvases)
-const HOVER_CIRCLE_RADIUS_PX = 400; // radius in CSS pixels -- same physical size on every image
-const HOVER_CIRCLE_FALLOFF = 0.9; // width of the dithered band as fraction of radius (0 = hard edge, 1 = dither covers the whole disk)
-const HOVER_CIRCLE_PULSE = 0.25; // radius pulse amplitude as fraction of radius (0 = no pulse)
-const HOVER_CIRCLE_PULSE_HZ = 0.1; // pulse frequency in Hz
-// Click circle -- sharper second disk that grows from the cursor on click
-const CLICK_CIRCLE_FALLOFF = 0.15; // dither band width as fraction of radius -- keep small for a hard, distinct edge
-const HOVER_CLICK_GROW_DURATION = 1000; // duration of the click-grow animation (ms)
-// Pixel sort -- vertical luminance sort triggered by clicking the title
-// One odd-even pass per frame, n passes guarantees an n-tall column is sorted.
+const HOVER_CIRCLE_RADIUS_PX = 400;
+const HOVER_CIRCLE_FALLOFF = 0.9;
+const HOVER_CIRCLE_PULSE = 0.25;
+const HOVER_CIRCLE_PULSE_HZ = 0.1;
+const CLICK_CIRCLE_FALLOFF = 0.15;
+const HOVER_CLICK_GROW_DURATION = 1000;
 const SORTED_MAX_SIZE = 384;
 const SORT_START_DURATION = 600;
 const SORT_RESET_DURATION = 600;
@@ -31,17 +27,13 @@ const SORT_SCALE_TWEEN_DURATION = 500;
 const SORT_ACTIVE_SCALE = 1;
 
 function getPixelSize() {
-  return window.innerWidth <= BREAKPOINT_MOBILE
-    ? PIXEL_SIZE_MOBILE
-    : PIXEL_SIZE_DESKTOP;
+  return window.innerWidth <= BREAKPOINT_MOBILE ? PIXEL_SIZE_MOBILE : PIXEL_SIZE_DESKTOP;
 }
 
 function isWebGLAvailable() {
   try {
     const canvas = document.createElement("canvas");
-    return !!(
-      canvas.getContext("webgl") || canvas.getContext("experimental-webgl")
-    );
+    return !!(canvas.getContext("webgl") || canvas.getContext("experimental-webgl"));
   } catch (e) {
     return false;
   }
@@ -50,14 +42,12 @@ function isWebGLAvailable() {
 let _mouseX = -1;
 let _mouseY = -1;
 let _lightMode = window.matchMedia("(prefers-color-scheme: light)").matches;
-window
-  .matchMedia("(prefers-color-scheme: light)")
-  .addEventListener("change", function (e) {
-    _lightMode = e.matches;
-    ditherInstances.forEach(function (dc) {
-      dc.render();
-    });
+window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function (e) {
+  _lightMode = e.matches;
+  ditherInstances.forEach(function (dc) {
+    dc.render();
   });
+});
 document.addEventListener(
   "mousemove",
   function (e) {
@@ -198,7 +188,6 @@ function buildFrag(pixelSize) {
 `;
 }
 
-// ponytail: inlined at call sites, kept as factory for readability
 function easeOut(p) {
   return 1.0 - Math.pow(1.0 - p, EASING_POWER);
 }
@@ -373,7 +362,7 @@ function ensurePaletteIdx(cached, palette) {
 class DitherCanvas {
   constructor(imgEl, skipReveal = false) {
     this.img = imgEl;
-    this.isVideo = imgEl.tagName === 'VIDEO';
+    this.isVideo = imgEl.tagName === "VIDEO";
     this.canvas = document.createElement("canvas");
     this.canvas.className = "parallax";
     this.gl = this.canvas.getContext("webgl");
@@ -437,7 +426,6 @@ class DitherCanvas {
           nx = (_mouseX - rect.left) / rect.width;
           ny = (_mouseY - rect.top) / rect.height;
 
-          // Same height-normalized aspect-corrected metric as the shader.
           const aspect = rect.width / rect.height;
           const cx = Math.max(0, Math.min(1, nx));
           const cy = Math.max(0, Math.min(1, ny));
@@ -465,8 +453,6 @@ class DitherCanvas {
           self.mouse[0] = nx;
           self.mouse[1] = ny;
           self.radius = radiusH;
-          // Render every frame so the pulse animates (and dither edge updates)
-          // even when the cursor is still.
           self.render();
         }
 
@@ -551,10 +537,7 @@ class DitherCanvas {
 
     const prog = gl.createProgram();
     gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
-    gl.attachShader(
-      prog,
-      compile(gl.FRAGMENT_SHADER, buildFrag(getPixelSize())),
-    );
+    gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, buildFrag(getPixelSize())));
     gl.linkProgram(prog);
 
     if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
@@ -568,11 +551,7 @@ class DitherCanvas {
 
     this.buf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buf);
-    gl.bufferData(
-      gl.ARRAY_BUFFER,
-      new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]),
-      gl.STATIC_DRAW,
-    );
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
 
     const aPos = gl.getAttribLocation(prog, "a_pos");
     gl.enableVertexAttribArray(aPos);
@@ -595,12 +574,7 @@ class DitherCanvas {
       time: gl.getUniformLocation(prog, "u_time"),
     };
 
-    this.bayerTex = this._makeTex(
-      BAYER_DATA,
-      BAYER_SIZE,
-      gl.LUMINANCE,
-      gl.REPEAT,
-    );
+    this.bayerTex = this._makeTex(BAYER_DATA, BAYER_SIZE, gl.LUMINANCE, gl.REPEAT);
 
     this.paletteTex = this._makeTex(null, 1, gl.RGB, gl.CLAMP_TO_EDGE);
 
@@ -618,17 +592,7 @@ class DitherCanvas {
     // NEAREST so the user sees crisp per-pixel swaps, not a blur across columns.
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      gl.RGBA,
-      1,
-      1,
-      0,
-      gl.RGBA,
-      gl.UNSIGNED_BYTE,
-      new Uint8Array([0, 0, 0, 255]),
-    );
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
   }
 
   _makeTex(data, size, format, wrap) {
@@ -641,17 +605,7 @@ class DitherCanvas {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
     if (data) {
-      gl.texImage2D(
-        gl.TEXTURE_2D,
-        0,
-        format,
-        size,
-        size,
-        0,
-        format,
-        gl.UNSIGNED_BYTE,
-        data,
-      );
+      gl.texImage2D(gl.TEXTURE_2D, 0, format, size, size, 0, format, gl.UNSIGNED_BYTE, data);
     }
 
     return t;
@@ -661,14 +615,7 @@ class DitherCanvas {
     const gl = this.gl;
 
     gl.bindTexture(gl.TEXTURE_2D, this.imgTex);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      gl.RGBA,
-      gl.RGBA,
-      gl.UNSIGNED_BYTE,
-      this.img,
-    );
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.img);
 
     const palette = extractPalette(this.img);
     const palData = new Uint8Array(
@@ -678,23 +625,12 @@ class DitherCanvas {
     );
 
     gl.bindTexture(gl.TEXTURE_2D, this.paletteTex);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      gl.RGB,
-      PALETTE_SIZE,
-      1,
-      0,
-      gl.RGB,
-      gl.UNSIGNED_BYTE,
-      palData,
-    );
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, PALETTE_SIZE, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, palData);
 
     this.palette = palette;
     this.paletteLum = new Float32Array(palette.length);
     for (let k = 0; k < palette.length; k++) {
-      this.paletteLum[k] =
-        palette[k].r * 0.299 + palette[k].g * 0.587 + palette[k].b * 0.114;
+      this.paletteLum[k] = palette[k].r * 0.299 + palette[k].g * 0.587 + palette[k].b * 0.114;
     }
 
     this.textureReady = true;
@@ -722,17 +658,7 @@ class DitherCanvas {
     }
     const gl = this.gl;
     gl.bindTexture(gl.TEXTURE_2D, this.sortedTex);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      gl.RGBA,
-      this.sortW,
-      this.sortH,
-      0,
-      gl.RGBA,
-      gl.UNSIGNED_BYTE,
-      this.sortBuffer,
-    );
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.sortW, this.sortH, 0, gl.RGBA, gl.UNSIGNED_BYTE, this.sortBuffer);
   }
 
   // One odd-even (brick) sort pass per column. Alternates between comparing
@@ -806,19 +732,13 @@ class DitherCanvas {
     if (palIdx && paletteLum) {
       for (let i = 0; i < n; i++) {
         const j = i * 4;
-        const rawLum =
-          this.sortBuffer[j] * 0.299 +
-          this.sortBuffer[j + 1] * 0.587 +
-          this.sortBuffer[j + 2] * 0.114;
+        const rawLum = this.sortBuffer[j] * 0.299 + this.sortBuffer[j + 1] * 0.587 + this.sortBuffer[j + 2] * 0.114;
         this.sortLum[i] = paletteLum[palIdx[i]] * 1000 + rawLum;
       }
     } else {
       for (let i = 0; i < n; i++) {
         const j = i * 4;
-        this.sortLum[i] =
-          this.sortBuffer[j] * 0.299 +
-          this.sortBuffer[j + 1] * 0.587 +
-          this.sortBuffer[j + 2] * 0.114;
+        this.sortLum[i] = this.sortBuffer[j] * 0.299 + this.sortBuffer[j + 1] * 0.587 + this.sortBuffer[j + 2] * 0.114;
       }
     }
 
@@ -855,13 +775,7 @@ class DitherCanvas {
       return Promise.resolve();
     }
     const self = this;
-    return this._tween(
-      "sort",
-      0,
-      SORT_RESET_DURATION,
-      "_sortRafId",
-      easeOut,
-    ).then(function () {
+    return this._tween("sort", 0, SORT_RESET_DURATION, "_sortRafId", easeOut).then(function () {
       self.sortBuffer = null;
       self.sortLum = null;
       self.sortDone = false;
@@ -888,10 +802,13 @@ class DitherCanvas {
 
   _tween(prop, target, duration, rafKey, easeFn) {
     const key = rafKey || "_rafId";
-    const ease = easeFn || function (p) {
-      var s = EASE_SPLIT, w = EASING_POWER;
-      return p < s ? 0.5 * Math.pow(p / s, w) : 1 - 0.5 * Math.pow((1 - p) / (1 - s), w);
-    };
+    const ease =
+      easeFn ||
+      function (p) {
+        var s = EASE_SPLIT,
+          w = EASING_POWER;
+        return p < s ? 0.5 * Math.pow(p / s, w) : 1 - 0.5 * Math.pow((1 - p) / (1 - s), w);
+      };
     cancelAnimationFrame(this[key]);
     const start = performance.now();
     const from = this[prop];
@@ -952,26 +869,20 @@ class DitherCanvas {
     const innerFraction = Math.max(1 - CLICK_CIRCLE_FALLOFF, 0.01);
     const target = (maxDist / innerFraction) * 1.05;
     // Linear so the visible reveal lasts the full duration.
-    return this._tween(
-      "clickRadius",
-      target,
-      duration,
-      "_clickRadiusRafId",
-      function (p) { return p; },
-    );
+    return this._tween("clickRadius", target, duration, "_clickRadiusRafId", function (p) {
+      return p;
+    });
   }
 
   dissolveFromBlack(duration) {
     this.dissolve = 1.0;
     this.render();
     const self = this;
-    return this._tween("dissolve", 0, duration, "_dissolveRafId").then(
-      function () {
-        if (self.revealOnly && self.canvas) {
-          self.canvas.style.display = "none";
-        }
-      },
-    );
+    return this._tween("dissolve", 0, duration, "_dissolveRafId").then(function () {
+      if (self.revealOnly && self.canvas) {
+        self.canvas.style.display = "none";
+      }
+    });
   }
 
   _startVideoLoop() {
@@ -1038,7 +949,9 @@ class DitherCanvas {
     if (this._sortIdleId !== null && window.cancelIdleCallback) {
       window.cancelIdleCallback(this._sortIdleId);
     }
-    if (this.isVideo) { this.img.pause(); }
+    if (this.isVideo) {
+      this.img.pause();
+    }
     this.sortBuffer = null;
     this.sortLum = null;
 
@@ -1100,10 +1013,7 @@ function captureDefaultScale() {
     if (inline) {
       document.body.style.removeProperty("--scale-image");
     }
-    _defaultScale =
-      parseFloat(
-        getComputedStyle(document.body).getPropertyValue("--scale-image"),
-      ) || 1;
+    _defaultScale = parseFloat(getComputedStyle(document.body).getPropertyValue("--scale-image")) || 1;
     if (inline) {
       document.body.style.setProperty("--scale-image", inline);
     }
