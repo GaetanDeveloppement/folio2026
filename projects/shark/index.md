@@ -5,6 +5,15 @@ project_title: "Shark — vfx"
 page_layout: project
 username: "gaëtan jestin"
 year: "2025"
+slug: "shark"
+alt: "Close up of a motorcycle rear wheel at night"
+order: 5
+images:
+  - "shark-1.webp"
+  - "shark-2.webp"
+  - "shark-3.webp"
+  - "shark-4.webp"
+  - "shark-5.webp"
 ---
 
 Shark est une marque française de casques moto reconnue depuis près de quarante ans pour son expertise en sécurité et en aérodynamique.

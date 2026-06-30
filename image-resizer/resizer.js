@@ -5,7 +5,6 @@ const path = require("path");
 // Configuration
 const inputFolder = "./input";
 const outputFolder = "../assets/image/generated/";
-const projectsFile = "../_data/projects.json";
 
 // Sizes based on common device widths
 // Mobile: 100vw - 24px → targeting ~350-750px range
@@ -29,36 +28,11 @@ if (!fs.existsSync(outputFolder)) {
   fs.mkdirSync(outputFolder, { recursive: true });
 }
 
-// Collect base names referenced by projects.json (image + images[])
-function collectReferencedBaseNames() {
-  const referenced = new Set();
-  if (!fs.existsSync(projectsFile)) {
-    return referenced;
-  }
-  try {
-    const projects = JSON.parse(fs.readFileSync(projectsFile, "utf8"));
-    for (const project of projects) {
-      if (project.image) {
-        referenced.add(path.parse(project.image).name);
-      }
-      if (Array.isArray(project.images)) {
-        for (const image of project.images) {
-          referenced.add(path.parse(image).name);
-        }
-      }
-    }
-  } catch (err) {
-    console.warn(`Could not parse ${projectsFile}: ${err.message}`);
-  }
-  return referenced;
-}
-
-// Remove generated files whose base name has no source and isn't referenced
+// Remove generated files whose source image is no longer in the input folder
 function cleanOrphans(inputBaseNames) {
   if (!fs.existsSync(outputFolder)) {
     return;
   }
-  const referenced = collectReferencedBaseNames();
   const sizesSet = new Set(sizes);
   let removed = 0;
 
@@ -72,7 +46,7 @@ function cleanOrphans(inputBaseNames) {
     if (!sizesSet.has(size)) {
       continue;
     }
-    if (inputBaseNames.has(baseName) || referenced.has(baseName)) {
+    if (inputBaseNames.has(baseName)) {
       continue;
     }
 
