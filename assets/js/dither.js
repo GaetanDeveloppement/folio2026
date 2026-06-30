@@ -409,8 +409,8 @@ class DitherRenderer {
   }
 
   _resize() {
-    this.canvas.width = window.innerWidth;
-    this.canvas.height = window.innerHeight;
+    this.canvas.width = this.canvas.offsetWidth || window.innerWidth;
+    this.canvas.height = this.canvas.offsetHeight || window.innerHeight;
   }
 
   _makeTex(data, size, format, wrap) {
@@ -1093,6 +1093,7 @@ document.addEventListener("DOMContentLoaded", function () {
   ditherRenderer = new DitherRenderer();
   if (ditherRenderer.gl) {
     document.body.appendChild(ditherRenderer.canvas);
+    ditherRenderer._resize();
   }
   initDither();
 });
