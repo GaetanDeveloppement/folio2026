@@ -234,7 +234,6 @@ body[data-layout="home"] .sidebar header h1 {
 .projects {
     grid-column: 5 / 9;
     overflow: hidden;
-    view-transition-name: images;
 
     @media (max-width: $breakpoint-mobile) {
         grid-column: auto;
@@ -274,6 +273,7 @@ body[data-layout="home"] .sidebar header h1 {
     p {
         font-size: 14px;
         position: absolute;
+        z-index: 2;
         bottom: $spacing-md;
         left: $spacing-md;
         padding: 4px 8px;

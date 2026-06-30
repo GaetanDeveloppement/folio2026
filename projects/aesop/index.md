@@ -11,5 +11,5 @@ Aesop est une marque australienne de cosmétique fondée en 1987, reconnue pour 
 
 Exploration visuelle autour de ce baume, réalisée à titre personnel. Le projet teste différentes approches de mise en scène produit en combinant 3D et outils génératifs, pour voir ce que ces techniques permettent en termes de rendu et de mouvement.
 
-|  <em>livrables</em>  |  direction créative <br/> stills d'animation <br/> explorations motion  |
-|  <em>status</em>  |  r&d  |
+|  *livrables*  |  direction créative <br/> stills d'animation <br/> explorations motion  |
+|  *status*  |  r&d  |
