@@ -19,7 +19,7 @@ images:
 
 La Fédération Française de Badminton fédère 12 ligues régionales, 89 comités départementaux et 1956 clubs à travers le territoire. Au moment du projet, elle portait l'ambition de renforcer sa visibilité, d'augmenter son nombre de licenciés et d'accompagner ses structures dans une stratégie digitale alignée sur les Objectifs de Développement Durable.
 
-La FFBAD a fait appel à Kairos Agency, pour compléter sa charte graphique et bâtir un univers numérique cohérent — refonte complète du site web, conception d'un extranet connecté aux outils et API existants, dans une démarche d'éco-conception. L'architecture de navigation a été entièrement repensée pour favoriser l'accès rapide aux informations clés (clubs, compétitions, licences, ressources), tandis que l'extranet sur mesure permet aux clubs et ligues une gestion fluide et centralisée de leurs activités, le tout pensé pour maximiser lisibilité, accessibilité et sobriété énergétique.
+La FFBAD a fait appel à Kairos Agency, pour compléter sa charte graphique et bâtir un univers numérique cohérent. Cela passe par la refonte complète du site web, la conception d'un extranet connecté aux outils et API existants, le tout dans une démarche d'éco-conception. L'architecture de navigation a été entièrement repensée pour favoriser l'accès rapide aux informations clés (clubs, compétitions, licences, ressources), tandis que l'extranet sur mesure permet aux clubs et ligues une gestion fluide et centralisée de leurs activités, le tout pensé pour maximiser lisibilité, accessibilité et sobriété énergétique.
 
 |  *livrables*  |  brand identity <br/> design de plateforme <br/> design d'interface web <br/> design system complet  |
 |  *liens*  |  [FFBAD ↗](https://www.ffbad.org/){:target="_blank"} |
