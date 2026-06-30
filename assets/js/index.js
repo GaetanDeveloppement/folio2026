@@ -34,12 +34,10 @@ function initScroll() {
   observers = [];
   lastOffsets = new Map();
 
-  if (isMobileViewport()) {
-    return;
-  }
+  const mobile = isMobileViewport();
 
   currentScale = readScale();
-  scrollContainerHeight = document.body.clientHeight;
+  scrollContainerHeight = mobile ? window.innerHeight : document.body.clientHeight;
   const imageElements = document.querySelectorAll(
     "#scroller .parallax:not(canvas)",
   );
@@ -68,66 +66,69 @@ function initScroll() {
     observers.push(observer);
   });
 
-  const scroller = document.getElementById("scroller");
-  const wrapper = document.getElementById("wrapper");
+  if (!mobile) {
+    const scroller = document.getElementById("scroller");
+    const wrapper = document.getElementById("wrapper");
 
-  const clone = scroller.cloneNode(true);
-  scroller.after(clone);
-  clone.id = "clone";
+    const clone = scroller.cloneNode(true);
+    scroller.after(clone);
+    clone.id = "clone";
 
-  clone.querySelectorAll("[data-dither-initialized]").forEach(function (el) {
-    el.removeAttribute("data-dither-initialized");
-  });
+    clone.querySelectorAll("[data-dither-initialized]").forEach(function (el) {
+      el.removeAttribute("data-dither-initialized");
+    });
 
-  lenis = new Lenis({
-    infinite: true,
-    syncTouch: true,
-    wrapper,
-    eventsTarget: window,
-  });
+    lenis = new Lenis({
+      infinite: true,
+      syncTouch: true,
+      wrapper,
+      eventsTarget: window,
+    });
 
-  const restoreKey = isProjectPage
-    ? SCROLL_POSITION_KEY + "-project"
-    : SCROLL_POSITION_KEY;
-  const savedPosition = sessionStorage.getItem(restoreKey);
-  const transitionItemTop = sessionStorage.getItem(TRANSITION_ITEM_TOP_KEY);
-  sessionStorage.removeItem(TRANSITION_ITEM_TOP_KEY);
+    const restoreKey = isProjectPage
+      ? SCROLL_POSITION_KEY + "-project"
+      : SCROLL_POSITION_KEY;
+    const savedPosition = sessionStorage.getItem(restoreKey);
+    const transitionItemTop = sessionStorage.getItem(TRANSITION_ITEM_TOP_KEY);
+    sessionStorage.removeItem(TRANSITION_ITEM_TOP_KEY);
 
-  if (transitionItemTop !== null) {
-    sessionStorage.removeItem(restoreKey);
-    const targetY = parseFloat(transitionItemTop);
-    const isMobile = window.innerWidth <= 768;
-    const cloneFirstItem = document.querySelector("#clone .project-item");
-    if (!isMobile && cloneFirstItem) {
-      const scrollOffset = cloneFirstItem.getBoundingClientRect().top - targetY;
-      lenis.scrollTo(scrollOffset, { immediate: true });
-      [
-        document.querySelector("#scroller .project-item"),
-        cloneFirstItem,
-      ].forEach(function (item) {
-        if (!item) {
-          return;
-        }
-        const media = item.querySelector("img.parallax, video.parallax");
-        if (media) {
-          media.setAttribute("data-skip-reveal", "true");
-        }
-      });
+    if (transitionItemTop !== null) {
+      sessionStorage.removeItem(restoreKey);
+      const targetY = parseFloat(transitionItemTop);
+      const cloneFirstItem = document.querySelector("#clone .project-item");
+      if (cloneFirstItem) {
+        const scrollOffset = cloneFirstItem.getBoundingClientRect().top - targetY;
+        lenis.scrollTo(scrollOffset, { immediate: true });
+        [
+          document.querySelector("#scroller .project-item"),
+          cloneFirstItem,
+        ].forEach(function (item) {
+          if (!item) {
+            return;
+          }
+          const media = item.querySelector("img.parallax, video.parallax");
+          if (media) {
+            media.setAttribute("data-skip-reveal", "true");
+          }
+        });
+      }
+    } else if (savedPosition) {
+      const position = parseFloat(savedPosition);
+      lenis.scrollTo(position, { immediate: true });
+      sessionStorage.removeItem(restoreKey);
     }
-  } else if (savedPosition) {
-    const position = parseFloat(savedPosition);
-    lenis.scrollTo(position, { immediate: true });
-    sessionStorage.removeItem(restoreKey);
-  }
 
-  // Dispatch after data-skip-reveal is set so the clone's first image (which
-  // is positioned at targetY after scroll restore) skips its reveal animation.
-  window.dispatchEvent(new CustomEvent("ditherInitClone", { detail: clone }));
+    // Dispatch after data-skip-reveal is set so the clone's first image (which
+    // is positioned at targetY after scroll restore) skips its reveal animation.
+    window.dispatchEvent(new CustomEvent("ditherInitClone", { detail: clone }));
+  } else {
+    sessionStorage.removeItem(TRANSITION_ITEM_TOP_KEY);
+  }
 
   items = Array.from(document.querySelectorAll(".parallax:not(canvas)"));
 
   function raf(time) {
-    lenis.raf(time);
+    if (lenis) lenis.raf(time);
 
     items.forEach(function (item) {
       const index = item.dataset["index"];
@@ -211,9 +212,6 @@ function recomputeAllGaps() {
 }
 
 function refreshParallaxScale() {
-  if (isMobileViewport()) {
-    return;
-  }
   currentScale = readScale();
   recomputeAllGaps();
 }
@@ -228,9 +226,6 @@ function cancelParallaxScaleTween() {
 }
 
 function tweenParallaxScale(target, duration) {
-  if (isMobileViewport()) {
-    return;
-  }
   cancelParallaxScaleTween();
   const from = readScale();
   if (Math.abs(from - target) < 0.001) {

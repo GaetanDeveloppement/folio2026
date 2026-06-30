@@ -50,7 +50,6 @@ body {
     font-family: $body-font;
 
     @media (max-width: $breakpoint-mobile) {
-        --scale-image: 1;
         height: auto;
         overflow: visible;
     }
@@ -88,6 +87,10 @@ main {
         grid-template-columns: 1fr;
         row-gap: $spacing-lg;
         padding: $spacing-sm;
+        padding-top: max(#{$spacing-sm}, env(safe-area-inset-top));
+        padding-bottom: max(#{$spacing-sm}, env(safe-area-inset-bottom));
+        padding-left: max(#{$spacing-sm}, env(safe-area-inset-left));
+        padding-right: max(#{$spacing-sm}, env(safe-area-inset-right));
     }
 }
 
