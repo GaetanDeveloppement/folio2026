@@ -558,7 +558,7 @@ class DitherCanvas {
     this._hoverStart = null;
     this.textureReady = false;
     this._revealDone = false;
-    this.revealOnly = document.body.dataset.layout === "project";
+    this.revealOnly = document.body.dataset.layout === "project" || this.isMobile;
 
     if (skipReveal) {
       imgEl.style.visibility = "visible";
