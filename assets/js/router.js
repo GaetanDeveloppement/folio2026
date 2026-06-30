@@ -134,6 +134,7 @@ function performTransition(href, pushToHistory) {
       window.destroyAllDither();
 
       swapContent(parsed);
+      window.scrollTo(0, 0);
 
       if (pushToHistory) {
         history.pushState({ href }, parsed.title, href);
