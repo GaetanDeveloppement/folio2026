@@ -28,4 +28,4 @@ Pour chacun, le travail a consisté à concevoir une direction artistique adapt�
 
 |  *livrables*  |  brand identity <br/> direction artistique <br/> product design  |
 |  *liens*  |  [Mon Service RH ↗](https://monservice-rh.org/){:target="_blank"} <br/> [Moon Énergies ↗](https://www.moon-energie.fr/){:target="_blank"} <br/> [Groupe Deret ↗](https://www.groupe-deret.fr/){:target="_blank"} <br/> [Maison Atable ↗](https://maison-atable.com/){:target="_blank"} <br/> [Biltoki ↗](https://web.archive.org/web/20251213170803/https://biltoki.com/){:target="_blank"} <br/> [Oligosante ↗](https://www.oligosante.com/){:target="_blank"} <br/> [Pacte mondial de l'ONU ↗](https://pactemondial.org/){:target="_blank"} <br/> [Grain Blanc ↗](https://grainblanc.fr/){:target="_blank"} <br/>  |
-|  *crédits*  |  Kairos Agency<br/>[Martin Avisseau](https://fr.linkedin.com/in/martin-avisseau) *— Design*  |
+|  *crédits*  |  Kairos Agency<br/>[Martin Avisseau](https://fr.linkedin.com/in/martin-avisseau) *— design*  |

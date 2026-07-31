@@ -23,4 +23,4 @@ La FFBAD a fait appel à Kairos Agency, pour compléter sa charte graphique et b
 
 |  *livrables*  |  brand identity <br/> design de plateforme <br/> design d'interface web <br/> design system complet  |
 |  *liens*  |  [FFBAD ↗](https://www.ffbad.org/){:target="_blank"} |
-|  *crédits*  |  Kairos Agency <br/> [Martin Avisseau  ↗](https://linkedin.com/in/martin-avisseau){:target="_blank"} *— Design* <br/> [Mathieu Daix  ↗](https://linkedin.com/in/mathieu-daix){:target="_blank"} *— Développement* <br/> [Rémi Latrille  ↗](https://linkedin.com/in/remilatrille/){:target="_blank"} *— Développement* <br/> [Virginie Fresno  ↗](https://linkedin.com/in/virginie-fresno-9b474a47/){:target="_blank"} *— Développement*  |
+|  *crédits*  |  Kairos Agency <br/> [Martin Avisseau  ↗](https://linkedin.com/in/martin-avisseau){:target="_blank"} *— design* <br/> [Mathieu Daix  ↗](https://linkedin.com/in/mathieu-daix){:target="_blank"} *— dev* <br/> [Rémi Latrille  ↗](https://linkedin.com/in/remilatrille/){:target="_blank"} *— dev* <br/> [Virginie Fresno  ↗](https://linkedin.com/in/virginie-fresno-9b474a47/){:target="_blank"} *— dev*  |
