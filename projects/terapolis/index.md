@@ -23,5 +23,5 @@ J'ai été contacté par <a href="https://www.noesya.coop/" target="_blank">noes
 
 
 |  *livrables*       |  direction créative <br/> création 3D <br/> design d'interface |
-|  *crédits*         |  [Awam  ↗](https://www.agence-awam.fr){:target="_blank"} *— gestion de projet* <br/> [noesya  ↗](https://www.noesya.coop){:target="_blank"} *— développement* |
+|  *crédits*         |  [Awam  ↗](https://www.agence-awam.fr){:target="_blank"} *— gestion de projet* <br/> [noesya  ↗](https://www.noesya.coop){:target="_blank"} *— dev* |
 |  *lien*         |  [voir le site  ↗](https://experience.terapolis.osuny.site){:target="_blank"} |

@@ -25,4 +25,4 @@ Carbon Saver a fait appel à Kairos Agency pour une refonte complète de son ide
 
 |  *livrables*  |  brand identity <br/> design de plateforme <br/> design d'interface web  |
 |  *liens*  |  [Carbon Saver ↗](https://carbon-saver.com/){:target="_blank"} |
-|  *crédits*  |  Kairos Agency <br/> [Martin Avisseau  ↗](https://linkedin.com/in/martin-avisseau){:target="_blank"} *— Design* <br/> [Mathieu Daix  ↗](https://linkedin.com/in/mathieu-daix){:target="_blank"} *— Développement*  |
+|  *crédits*  |  Kairos Agency <br/> [Martin Avisseau  ↗](https://linkedin.com/in/martin-avisseau){:target="_blank"} *— design* <br/> [Mathieu Daix  ↗](https://linkedin.com/in/mathieu-daix){:target="_blank"} *— dev*  |

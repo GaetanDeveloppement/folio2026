@@ -6,6 +6,6 @@ page_layout: project
 ---
 
 # Phronesis - Making of
-*Design & ingénierie*
+*design & ingénierie*
 
 Woohoo
