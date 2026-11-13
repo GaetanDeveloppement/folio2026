@@ -1,11 +1,28 @@
 ---
 layout: app
-title: "gaëtan jestin - Aesop"
+title: "Aesop"
 project_title: "Aesop — r&d"
 page_layout: project
+username: "gaëtan jestin"
+year: "2026"
+slug: "aesop"
+alt: "Aesop perfume bottle still render"
+order: 1
+images:
+  - "aesop-1.webp"
+  - "aesop-cap-drip.mp4"
+  - "aesop-2.webp"
+  - "aesop-5.webp"
+  - "aesop-focus.mp4"
+  - "aesop-4.webp"
+  - "aesop-reveal.mp4"
+  - "aesop-turntable.mp4"
+  - "aesop-3.webp"
 ---
 
-# Aesop
-*3d r&d*
+Aesop est une marque australienne de cosmétique fondée en 1987, reconnue pour ses formules à base de plantes et son approche minimaliste du design produit. Le Baume Aromatique pour les Mains Réverence fait partie de sa gamme soin des mains, pensé comme un geste sensoriel autant qu'un soin, avec une texture riche et un parfum boisé caractéristique de l'identité olfactive de la marque.
 
-This is new text now...
+Exploration visuelle autour de ce baume, réalisée à titre personnel. Le projet teste différentes approches de mise en scène produit en combinant 3D et outils génératifs, pour voir ce que ces techniques permettent en termes de rendu et de mouvement.
+
+|  *livrables*  |  direction créative <br/> stills d'animation <br/> explorations motion  |
+|  *statut*  |  r&d  |

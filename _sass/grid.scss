@@ -1,0 +1,14 @@
+@function computeGridColumn($columnCount, $outerGutter: true) {
+    @return calc(
+        (
+                var(--vw) -
+                    (
+                        #{$columnCount - 1 + if($outerGutter, 2, 0)} *
+                            var(--grid-gutter)
+                    )
+            ) /
+            #{$columnCount}
+    );
+}
+
+
